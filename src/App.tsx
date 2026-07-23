@@ -89,7 +89,15 @@ export default function App() {
     formData.append('prompt', finalPrompt);
     formData.append('resolution', selectedResolution);
 
-    const endpoint = `${API_BASE_URL}/api/edit-pro-4k`;
+    // Separated Route Execution:
+    let endpoint = `${API_BASE_URL}/api/edit`;
+    if (selectedResolution === '4K' || finalPrompt.toLowerCase().includes('4k')) {
+      // 4K Command -> Triggers Free Hugging Face AI Super-Resolution Engine
+      endpoint = `${API_BASE_URL}/api/free-4k-upscale`;
+    } else if (referenceFile) {
+      // Reference Style Video -> Triggers Multimodal Style Transfer
+      endpoint = `${API_BASE_URL}/api/edit-with-reference`;
+    }
 
     try {
       const response = await fetch(endpoint, {

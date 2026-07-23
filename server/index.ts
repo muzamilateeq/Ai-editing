@@ -253,7 +253,15 @@ app.post(
       const outputFilename = `pro-4k-${Date.now()}-${Math.random().toString(36).substring(2, 7)}.mp4`;
       const outputPath = path.join(OUTPUTS_DIR, outputFilename);
 
-      if (referenceFile) {
+      if (targetRes === '4K' || prompt.toLowerCase().includes('4k')) {
+        console.log(`[API /api/edit-pro-4k] 4K Requested: Routing to Hugging Face Open-Source AI Super-Resolution...`);
+        await processHuggingFace4KUpscale({
+          inputPath: userFile.path,
+          outputPath: outputPath,
+          targetResolution: '3840x2160',
+          fps: 60,
+        });
+      } else if (referenceFile) {
         await processStyleTransferWithFFmpeg(userFile.path, outputPath, instructions);
       } else {
         await processVideoWithFFmpeg(userFile.path, outputPath, instructions);
