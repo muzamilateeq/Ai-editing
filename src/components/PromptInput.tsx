@@ -1,9 +1,12 @@
 import React from 'react';
 import { Wand2, Loader2, Sparkles, Zap, Flame, Film, Smartphone, Gamepad2, Radio, Crosshair } from 'lucide-react';
+import { ResolutionSelector } from './ResolutionSelector';
 
 interface PromptInputProps {
   prompt: string;
   setPrompt: (value: string) => void;
+  selectedResolution: '1080p' | '2K' | '4K';
+  onResolutionChange: (res: '1080p' | '2K' | '4K') => void;
   onSubmit: () => void;
   isLoading: boolean;
   disabled: boolean;
@@ -12,18 +15,18 @@ interface PromptInputProps {
 const PUBG_GAMING_PRESETS = [
   {
     icon: <Gamepad2 className="w-3.5 h-3.5 text-yellow-400" />,
-    label: '🎮 PUBG Dark Fantasy Lobby',
-    prompt: 'Apply dark fantasy PUBG lobby color grade, add beat sync zoom pulse at 1.2s on dance move, trim first 2 seconds, and add vignette effect',
+    label: '🎮 PUBG Dark Fantasy (4K)',
+    prompt: 'Apply dark fantasy PUBG lobby color grade, add beat sync zoom pulse at 1.2s on dance move, trim first 2 seconds, upscale to crisp 4K Ultra HD',
   },
   {
     icon: <Crosshair className="w-3.5 h-3.5 text-rose-400" />,
-    label: '🔥 Velocity Speed Ramp & Zoom',
-    prompt: 'Apply dramatic velocity speed ramp, add beat sync zoom on dance move at 1.2s, and set RGB shake effect',
+    label: '🔥 Velocity Speed Ramp & 2K',
+    prompt: 'Apply dramatic velocity speed ramp, add beat sync zoom on dance move at 1.2s, set RGB shake, and enhance quality to 2K QHD',
   },
   {
     icon: <Radio className="w-3.5 h-3.5 text-purple-400" />,
     label: '⚡ Flash Cut & Beat Zoom',
-    prompt: 'Add flash cut at 1.2s, zoomPulse at 1.2s with factor 1.4, and apply dark fantasy PUBG color grade',
+    prompt: 'Add flash cut at 1.2s, zoomPulse at 1.2s with factor 1.4, apply dark fantasy PUBG color grade',
   },
   {
     icon: <Smartphone className="w-3.5 h-3.5 text-pink-400" />,
@@ -32,19 +35,21 @@ const PUBG_GAMING_PRESETS = [
   },
   {
     icon: <Flame className="w-3.5 h-3.5 text-cyan-400" />,
-    label: '⚡ Cyberpunk Emote Edit',
-    prompt: 'Apply Cyberpunk neon color grade, RGB shake effect, and speed up by 2.0x',
+    label: '⚡ Cyberpunk 4K Master',
+    prompt: 'Apply Cyberpunk neon color grade, RGB shake effect, 2.0x speed, and render crisp 4K Ultra HD master',
   },
   {
     icon: <Film className="w-3.5 h-3.5 text-amber-400" />,
-    label: '🌇 Vintage Cinematic Montage',
-    prompt: 'Apply vintage retro film grade, slow motion 0.5x, dark vignette, and trim first 3 seconds',
+    label: '🌇 Vintage 2K QHD Montage',
+    prompt: 'Apply vintage retro film grade, slow motion 0.5x, dark vignette, 2K QHD sharpening, and trim first 3 seconds',
   },
 ];
 
 export const PromptInput: React.FC<PromptInputProps> = ({
   prompt,
   setPrompt,
+  selectedResolution,
+  onResolutionChange,
   onSubmit,
   isLoading,
   disabled,
@@ -66,7 +71,7 @@ export const PromptInput: React.FC<PromptInputProps> = ({
           Gaming & Emote AI Editing Prompt
         </label>
         <span className="text-xs px-2.5 py-1 rounded-full bg-gradient-to-r from-amber-500/20 to-purple-500/20 border border-amber-500/30 text-amber-300 font-medium flex items-center gap-1">
-          <Gamepad2 className="w-3 h-3 text-yellow-400" /> PUBG Engine Active
+          <Gamepad2 className="w-3 h-3 text-yellow-400" /> PUBG 4K Engine
         </span>
       </div>
 
@@ -75,7 +80,7 @@ export const PromptInput: React.FC<PromptInputProps> = ({
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Describe your PUBG / Gaming montage edits e.g., 'Add beat sync zoom on dance move, apply velocity speed ramp, PUBG dark fantasy color grade, and flash cuts'..."
+          placeholder="Describe your PUBG / Gaming montage edits e.g., 'Add beat sync zoom on dance move, velocity speed ramp, PUBG dark fantasy color grade, and upscale to 4K Ultra HD'..."
           disabled={isLoading}
           rows={3}
           className="w-full bg-slate-900/90 text-slate-100 placeholder-slate-500 rounded-xl p-4 text-sm border border-slate-700/70 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 focus:outline-none transition-all resize-none shadow-inner"
@@ -85,6 +90,13 @@ export const PromptInput: React.FC<PromptInputProps> = ({
           Press Enter to execute
         </div>
       </div>
+
+      {/* Resolution & Quality Selector */}
+      <ResolutionSelector
+        selectedResolution={selectedResolution}
+        onResolutionChange={onResolutionChange}
+        disabled={isLoading}
+      />
 
       {/* Gaming Preset Chips */}
       <div className="space-y-2">
@@ -120,12 +132,12 @@ export const PromptInput: React.FC<PromptInputProps> = ({
         {isLoading ? (
           <>
             <Loader2 className="w-5 h-5 animate-spin text-amber-200" />
-            <span>AI Rendering PUBG Gaming Montage Stream...</span>
+            <span>AI Upscaling & Rendering Video ({selectedResolution})...</span>
           </>
         ) : (
           <>
             <Wand2 className="w-5 h-5 text-amber-200 group-hover:rotate-12 transition-transform duration-300" />
-            <span>Start Gaming AI Edit</span>
+            <span>Start AI Edit ({selectedResolution})</span>
           </>
         )}
       </button>

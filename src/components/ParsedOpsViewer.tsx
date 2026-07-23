@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Cpu, ChevronDown, ChevronUp, Code2, Scissors, Gauge, VolumeX, Eye, RotateCw, Volume2, Sparkles, Smartphone, Palette, Film, Gamepad2, Zap, Radio } from 'lucide-react';
+import { Cpu, ChevronDown, ChevronUp, Code2, Scissors, Gauge, VolumeX, Eye, RotateCw, Volume2, Sparkles, Smartphone, Palette, Film, Gamepad2, Zap, Radio, Crown } from 'lucide-react';
 import type { VideoEditInstructions } from '../../server/lib/geminiParser';
 
 export type { VideoEditInstructions };
@@ -60,6 +60,12 @@ export const ParsedOpsViewer: React.FC<ParsedOpsViewerProps> = ({
 
       {/* Parameter Badges */}
       <div className="flex flex-wrap gap-2 pt-1">
+        {instructions.upscale && (
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/20 border border-amber-500/40 text-xs text-amber-200 shadow-sm font-bold">
+            <Crown className="w-3.5 h-3.5 text-amber-400" />
+            Output Quality: <span className="font-mono text-amber-300">{instructions.upscale.target || '4K'} Sharpened</span>
+          </div>
+        )}
         {instructions.colorPreset === 'pubg_dark_fantasy' && (
           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-xs text-amber-200 shadow-sm font-semibold">
             <Gamepad2 className="w-3.5 h-3.5 text-yellow-400" />

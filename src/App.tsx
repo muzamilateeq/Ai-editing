@@ -23,7 +23,8 @@ export default function App() {
   const [referenceFile, setReferenceFile] = useState<File | null>(null);
   const [referencePreviewUrl, setReferencePreviewUrl] = useState<string | null>(null);
 
-  const [prompt, setPrompt] = useState<string>('Add beat sync zoom on dance move, apply PUBG dark fantasy lobby color grade, velocity speed ramp, and flash cuts');
+  const [prompt, setPrompt] = useState<string>('Add beat sync zoom on dance move, apply PUBG dark fantasy lobby color grade, velocity speed ramp, upscale to 4K Ultra HD');
+  const [selectedResolution, setSelectedResolution] = useState<'1080p' | '2K' | '4K'>('4K');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [editResult, setEditResult] = useState<EditResult | null>(null);
@@ -73,13 +74,19 @@ export default function App() {
     setIsLoading(true);
     setError(null);
 
+    // Append resolution instruction if not already mentioned
+    let finalPrompt = prompt.trim();
+    if (!finalPrompt.toLowerCase().includes('1080p') && !finalPrompt.toLowerCase().includes('2k') && !finalPrompt.toLowerCase().includes('4k')) {
+      finalPrompt += `, render output in crisp ${selectedResolution} quality`;
+    }
+
     const formData = new FormData();
     formData.append('user_video', userFile);
     formData.append('video', userFile);
     if (referenceFile) {
       formData.append('reference_video', referenceFile);
     }
-    formData.append('prompt', prompt.trim());
+    formData.append('prompt', finalPrompt);
 
     const endpoint = referenceFile ? `${API_BASE_URL}/api/edit-with-reference` : `${API_BASE_URL}/api/edit`;
 
@@ -218,6 +225,8 @@ export default function App() {
           <PromptInput
             prompt={prompt}
             setPrompt={setPrompt}
+            selectedResolution={selectedResolution}
+            onResolutionChange={setSelectedResolution}
             onSubmit={handleStartEditing}
             isLoading={isLoading}
             disabled={!userFile}

@@ -2,6 +2,7 @@ import ffmpeg from 'fluent-ffmpeg';
 import ffmpegInstaller from '@ffmpeg-installer/ffmpeg';
 import ffprobeInstaller from '@ffprobe-installer/ffprobe';
 import type { VideoEditInstructions } from './geminiParser.js';
+import { buildQualityFilterGraph } from './qualityEnhancer.js';
 import path from 'path';
 import fs from 'fs';
 
@@ -142,6 +143,20 @@ export async function processVideoWithFFmpeg(
       videoFilters.push('transpose=2');
     }
 
+    // --- Resolution & Quality Upscaling ---
+    let renderOptions = [
+      '-preset ultrafast',
+      '-crf 22',
+      '-pix_fmt yuv420p',
+      '-movflags +faststart'
+    ];
+
+    if (instructions.upscale) {
+      const qGraph = buildQualityFilterGraph(instructions.upscale, instructions.aspectRatio);
+      videoFilters.push(...qGraph.filters);
+      renderOptions = qGraph.outputOptions;
+    }
+
     // Apply Video Filters
     if (videoFilters.length > 0) {
       command = command.videoFilters(videoFilters);
@@ -159,18 +174,14 @@ export async function processVideoWithFFmpeg(
         command = command.audioFilters(audioFilters);
       }
       
-      command = command.audioCodec('aac').audioBitrate('128k');
+      const audioBitrate = instructions.upscale?.target === '4K' ? '320k' : instructions.upscale?.target === '2K' ? '256k' : '128k';
+      command = command.audioCodec('aac').audioBitrate(audioBitrate);
     }
 
     // Output options
     command = command
       .videoCodec('libx264')
-      .outputOptions([
-        '-preset ultrafast',
-        '-crf 22',
-        '-pix_fmt yuv420p',
-        '-movflags +faststart'
-      ])
+      .outputOptions(renderOptions)
       .output(outputPath);
 
     // Event handlers
