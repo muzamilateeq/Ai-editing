@@ -10,6 +10,7 @@ import { processVideoWithFFmpeg } from './lib/ffmpegRunner.js';
 import { analyzeReferenceVideo } from './lib/referenceAnalyzer.js';
 import { processStyleTransferWithFFmpeg } from './lib/ffmpegStyleTransfer.js';
 import { processHuggingFace4KUpscale } from './lib/huggingFace4k.js';
+import { processUltra10XUpscale } from './lib/ultra10xUpscaler.js';
 
 dotenv.config();
 
@@ -353,6 +354,71 @@ app.post(
       res.status(500).json({
         success: false,
         error: error.message || 'An unexpected error occurred during Hugging Face 4K upscale.',
+      });
+    }
+  }
+);
+
+// Dedicated Dual-Pass 10x AI Clarity Master Upscale API Endpoint
+app.post(
+  '/api/upscale-10x',
+  upload.fields([
+    { name: 'user_video', maxCount: 1 },
+    { name: 'video', maxCount: 1 },
+  ]),
+  async (req: express.Request, res: express.Response): Promise<void> => {
+    try {
+      const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+      const videoFile = files?.['user_video']?.[0] || files?.['video']?.[0];
+
+      if (!videoFile) {
+        res.status(400).json({ success: false, error: 'Video file (user_video) is required for 10x AI upscale.' });
+        return;
+      }
+
+      console.log(`\n==================================================`);
+      console.log(`[API /api/upscale-10x] Starting Dual-Pass AI 10x Clarity Master Conversion...`);
+      console.log(`[API /api/upscale-10x] Input File: ${videoFile.filename}`);
+
+      const outputFilename = `ultra10x-${Date.now()}-${Math.random().toString(36).substring(2, 7)}.mp4`;
+      const outputPath = path.join(OUTPUTS_DIR, outputFilename);
+
+      const ultraResult = await processUltra10XUpscale({
+        inputPath: videoFile.path,
+        outputPath: outputPath,
+        targetResolution: '3840x2160',
+        fps: 60,
+      });
+
+      const relativeResultUrl = `/outputs/${outputFilename}`;
+      const relativeOriginalUrl = `/uploads/${videoFile.filename}`;
+
+      console.log(`[API /api/upscale-10x] Success! Dual-Pass 10x 4K Master ready at ${relativeResultUrl}`);
+      console.log(`==================================================\n`);
+
+      res.json({
+        success: true,
+        resultUrl: relativeResultUrl,
+        originalUrl: relativeOriginalUrl,
+        upscaleEngine: ultraResult.engine,
+        pass1Model: ultraResult.pass1Model,
+        pass2Model: ultraResult.pass2Model,
+        resolution: ultraResult.resolution,
+        instructions: {
+          upscaleTarget: '4K',
+          fps60: true,
+          sharpening: true,
+          denoise: true,
+          highGraphicsColor: true,
+          crf: 10,
+          explanation: 'Dual-Pass AI Super-Resolution (Real-ESRGAN x4 Spatial Reconstruction + GFPGAN Character & Weapon Texture Enhancement + CRF 10 Lossless Master Pass).',
+        },
+      });
+    } catch (error: any) {
+      console.error('[API /api/upscale-10x] Error during 10x AI upscale:', error);
+      res.status(500).json({
+        success: false,
+        error: error.message || 'An unexpected error occurred during 10x AI upscale.',
       });
     }
   }
