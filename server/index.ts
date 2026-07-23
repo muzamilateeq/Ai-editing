@@ -130,6 +130,15 @@ app.post('/api/edit', upload.single('video'), async (req: express.Request, res: 
   }
 });
 
+// Global JSON error handler middleware to prevent HTML error responses
+app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  console.error('[Express Error Handler]:', err.message || err);
+  res.status(err.status || 500).json({
+    success: false,
+    error: err.message || 'An unexpected server error occurred.',
+  });
+});
+
 // Fallback route for SPA serving index.html if dist exists
 app.get('*', (_req, res) => {
   const indexPath = path.join(rootDir, 'dist', 'index.html');

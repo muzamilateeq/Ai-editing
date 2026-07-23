@@ -61,7 +61,15 @@ export default function App() {
         body: formData,
       });
 
-      const data = await response.json();
+      const contentType = response.headers.get('content-type') || '';
+      let data: any;
+
+      if (contentType.includes('application/json')) {
+        data = await response.json();
+      } else {
+        const text = await response.text();
+        throw new Error(`Server returned HTML response (${response.status}): ${text.substring(0, 150)}`);
+      }
 
       if (!response.ok || !data.success) {
         throw new Error(data.error || 'Failed to edit video');
