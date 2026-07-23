@@ -145,7 +145,7 @@ export async function processVideoWithFFmpeg(
 
     // --- Smooth 60FPS & High Graphics Color ---
     if (instructions.fps60) {
-      videoFilters.push('fps=fps=60');
+      videoFilters.push('fps=60');
     }
     if (instructions.highGraphicsColor) {
       videoFilters.push('eq=contrast=1.3:brightness=0.02:saturation=1.5,colorchannelmixer=rr=1.1:gg=1.1:bb=1.1');

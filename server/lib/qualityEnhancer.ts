@@ -60,11 +60,10 @@ export function buildQualityFilterGraph(
     filters.push('hqdn3d=1.5:1.5:3:3');
   }
 
-  // 4. Adaptive Sharpening & Unsharp Mask (CAS + Unsharp)
+  // 4. Adaptive Sharpening (Unsharp Mask - Built-in FFmpeg Filter)
   const sharpenAmount = typeof upscale.sharpening === 'number' ? upscale.sharpening : 0.5;
   if (sharpenAmount > 0) {
     const lumaAmount = (sharpenAmount * 1.2).toFixed(2);
-    filters.push(`cas=${sharpenAmount}`);
     filters.push(`unsharp=5:5:${lumaAmount}:5:5:0.4`);
   }
 
