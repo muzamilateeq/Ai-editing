@@ -5,9 +5,19 @@ interface UploadZoneProps {
   selectedFile: File | null;
   onFileSelect: (file: File | null) => void;
   videoPreviewUrl: string | null;
+  title?: string;
+  badge?: string;
+  accentColor?: 'indigo' | 'purple' | 'amber';
 }
 
-export const UploadZone: React.FC<UploadZoneProps> = ({ selectedFile, onFileSelect, videoPreviewUrl }) => {
+export const UploadZone: React.FC<UploadZoneProps> = ({
+  selectedFile,
+  onFileSelect,
+  videoPreviewUrl,
+  title = 'Click to upload or drag & drop video',
+  badge = '1-Click AI Automated Editing',
+  accentColor = 'indigo',
+}) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
 
@@ -53,6 +63,12 @@ export const UploadZone: React.FC<UploadZoneProps> = ({ selectedFile, onFileSele
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
+  const colorClasses = {
+    indigo: 'border-indigo-500/50 bg-indigo-500/10 text-indigo-400',
+    purple: 'border-purple-500/50 bg-purple-500/10 text-purple-400',
+    amber: 'border-amber-500/50 bg-amber-500/10 text-amber-400',
+  }[accentColor];
+
   return (
     <div className="w-full">
       <input
@@ -69,39 +85,32 @@ export const UploadZone: React.FC<UploadZoneProps> = ({ selectedFile, onFileSele
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
           onClick={() => fileInputRef.current?.click()}
-          className={`glass-panel-interactive rounded-2xl p-8 text-center cursor-pointer border-2 border-dashed transition-all duration-300 relative group overflow-hidden ${
+          className={`glass-panel-interactive rounded-2xl p-6 text-center cursor-pointer border-2 border-dashed transition-all duration-300 relative group overflow-hidden ${
             isDragging
-              ? 'border-indigo-400 bg-indigo-500/10 scale-[1.01]'
+              ? colorClasses
               : 'border-slate-700/70 hover:border-indigo-500/50 hover:bg-slate-900/60'
           }`}
         >
-          {/* Subtle hover gradient background */}
-          <div className="absolute inset-0 bg-gradient-to-tr from-indigo-600/5 via-transparent to-purple-600/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
-
-          <div className="flex flex-col items-center justify-center space-y-4 py-4 relative z-10">
-            <div className="w-16 h-16 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center group-hover:scale-110 group-hover:bg-indigo-500/20 transition-all duration-300 text-indigo-400">
-              <UploadCloud className="w-8 h-8" />
+          <div className="flex flex-col items-center justify-center space-y-3 py-2 relative z-10">
+            <div className={`w-14 h-14 rounded-2xl border flex items-center justify-center group-hover:scale-110 transition-all duration-300 ${colorClasses}`}>
+              <UploadCloud className="w-7 h-7" />
             </div>
 
             <div className="space-y-1">
-              <p className="text-lg font-semibold text-slate-100">
-                Click to upload or drag & drop video
-              </p>
-              <p className="text-sm text-slate-400">
-                MP4, MOV, WebM or AVI (Up to 250MB)
-              </p>
+              <p className="text-base font-semibold text-slate-100">{title}</p>
+              <p className="text-xs text-slate-400">MP4, MOV, WebM (Up to 250MB)</p>
             </div>
 
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-800/80 border border-slate-700/60 text-xs font-medium text-slate-300">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-800/80 border border-slate-700/60 text-xs font-medium text-slate-300">
               <Film className="w-3.5 h-3.5 text-indigo-400" />
-              1-Click AI Automated Editing
+              {badge}
             </div>
           </div>
         </div>
       ) : (
         <div className="glass-panel rounded-2xl p-4 border border-slate-700/80 flex flex-col md:flex-row items-center gap-4 relative overflow-hidden">
           {videoPreviewUrl && (
-            <div className="w-full md:w-48 h-32 rounded-xl overflow-hidden bg-black/60 relative border border-slate-800 flex-shrink-0">
+            <div className="w-full md:w-40 h-28 rounded-xl overflow-hidden bg-black/60 relative border border-slate-800 flex-shrink-0">
               <video
                 src={videoPreviewUrl}
                 className="w-full h-full object-cover"
@@ -114,9 +123,9 @@ export const UploadZone: React.FC<UploadZoneProps> = ({ selectedFile, onFileSele
                   v.currentTime = 0;
                 }}
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent flex items-end p-2">
-                <span className="text-[10px] uppercase font-bold tracking-wider text-slate-300 bg-slate-900/80 px-2 py-0.5 rounded backdrop-blur">
-                  Hover to Preview
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent flex items-end p-1.5">
+                <span className="text-[9px] uppercase font-bold tracking-wider text-slate-300 bg-slate-900/80 px-1.5 py-0.5 rounded backdrop-blur">
+                  Preview
                 </span>
               </div>
             </div>
@@ -125,11 +134,11 @@ export const UploadZone: React.FC<UploadZoneProps> = ({ selectedFile, onFileSele
           <div className="flex-1 min-w-0 space-y-1">
             <div className="flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-              <h4 className="font-semibold text-slate-100 truncate text-base">
+              <h4 className="font-semibold text-slate-100 truncate text-sm">
                 {selectedFile.name}
               </h4>
             </div>
-            <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400">
+            <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
               <span className="flex items-center gap-1">
                 <FileVideo className="w-3.5 h-3.5 text-indigo-400" />
                 {formatFileSize(selectedFile.size)}
@@ -144,11 +153,11 @@ export const UploadZone: React.FC<UploadZoneProps> = ({ selectedFile, onFileSele
               onFileSelect(null);
               if (fileInputRef.current) fileInputRef.current.value = '';
             }}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white text-xs font-medium transition-colors"
-            title="Remove video"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 border border-slate-700 text-slate-300 hover:text-white text-xs font-medium transition-colors"
+            title="Change file"
           >
-            <X className="w-4 h-4" />
-            Change Video
+            <X className="w-3.5 h-3.5" />
+            Change
           </button>
         </div>
       )}

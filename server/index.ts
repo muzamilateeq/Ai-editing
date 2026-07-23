@@ -7,6 +7,8 @@ import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { parseVideoEditPrompt } from './lib/geminiParser.js';
 import { processVideoWithFFmpeg } from './lib/ffmpegRunner.js';
+import { analyzeReferenceVideo } from './lib/referenceAnalyzer.js';
+import { processStyleTransferWithFFmpeg } from './lib/ffmpegStyleTransfer.js';
 
 dotenv.config();
 
@@ -129,6 +131,72 @@ app.post('/api/edit', upload.single('video'), async (req: express.Request, res: 
     });
   }
 });
+
+// Reference Style Cloning API Endpoint
+app.post(
+  '/api/edit-with-reference',
+  upload.fields([
+    { name: 'user_video', maxCount: 1 },
+    { name: 'reference_video', maxCount: 1 },
+    { name: 'video', maxCount: 1 }, // Fallback alias
+  ]),
+  async (req: express.Request, res: express.Response): Promise<void> => {
+    try {
+      const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+      const userFile = files?.['user_video']?.[0] || files?.['video']?.[0];
+      const referenceFile = files?.['reference_video']?.[0];
+      const prompt = req.body?.prompt || '';
+
+      if (!userFile) {
+        res.status(400).json({ success: false, error: 'Target user video file (user_video) is required.' });
+        return;
+      }
+
+      console.log(`\n==================================================`);
+      console.log(`[API /api/edit-with-reference] Processing Reference Style Cloning...`);
+      console.log(`[API /api/edit-with-reference] Target Video: ${userFile.filename}`);
+      if (referenceFile) {
+        console.log(`[API /api/edit-with-reference] Reference Style Video: ${referenceFile.filename}`);
+      }
+
+      // Step 1: Analyze Reference Video via Gemini Multimodal Flash
+      const referencePath = referenceFile ? referenceFile.path : '';
+      const analysisResult = await analyzeReferenceVideo(referencePath, prompt);
+      console.log(`[API /api/edit-with-reference] Reference Analysis (${analysisResult.source}):`, analysisResult.style);
+
+      // Step 2: Prepare output file path
+      const outputFilename = `cloned-${Date.now()}-${Math.random().toString(36).substring(2, 7)}.mp4`;
+      const outputPath = path.join(OUTPUTS_DIR, outputFilename);
+
+      // Step 3: Run FFmpeg Style Transfer pipeline
+      await processStyleTransferWithFFmpeg(userFile.path, outputPath, analysisResult.style);
+
+      const relativeResultUrl = `/outputs/${outputFilename}`;
+      const relativeOriginalUrl = `/uploads/${userFile.filename}`;
+      const relativeReferenceUrl = referenceFile ? `/uploads/${referenceFile.filename}` : null;
+
+      console.log(`[API /api/edit-with-reference] Success! Cloned video ready at ${relativeResultUrl}`);
+      console.log(`==================================================\n`);
+
+      res.json({
+        success: true,
+        resultUrl: relativeResultUrl,
+        originalUrl: relativeOriginalUrl,
+        referenceUrl: relativeReferenceUrl,
+        instructions: analysisResult.style,
+        aiSource: analysisResult.source,
+        prompt: prompt,
+        rawAiResponse: analysisResult.rawResponse,
+      });
+    } catch (error: any) {
+      console.error('[API /api/edit-with-reference] Error during style transfer:', error);
+      res.status(500).json({
+        success: false,
+        error: error.message || 'An unexpected error occurred during style transfer.',
+      });
+    }
+  }
+);
 
 // Global JSON error handler middleware to prevent HTML error responses
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {

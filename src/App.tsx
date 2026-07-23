@@ -3,11 +3,12 @@ import { UploadZone } from './components/UploadZone';
 import { PromptInput } from './components/PromptInput';
 import { VideoPlayer } from './components/VideoPlayer';
 import { ParsedOpsViewer, VideoEditInstructions } from './components/ParsedOpsViewer';
-import { Wand2, Film, Sparkles, AlertCircle, CheckCircle2, Video, RefreshCw, KeyRound } from 'lucide-react';
+import { Wand2, Film, Sparkles, AlertCircle, CheckCircle2, Video, RefreshCw, KeyRound, Layers, Copy } from 'lucide-react';
 
 interface EditResult {
   resultUrl: string;
   originalUrl: string;
+  referenceUrl?: string | null;
   instructions: VideoEditInstructions;
   aiSource: 'gemini' | 'fallback';
   prompt: string;
@@ -16,9 +17,13 @@ interface EditResult {
 const API_BASE_URL = import.meta.env.VITE_API_URL || (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' ? 'http://localhost:3001' : '');
 
 export default function App() {
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [videoPreviewUrl, setVideoPreviewUrl] = useState<string | null>(null);
-  const [prompt, setPrompt] = useState<string>('Trim the first 3 seconds, speed up by 1.5x, and mute audio');
+  const [userFile, setUserFile] = useState<File | null>(null);
+  const [userPreviewUrl, setUserPreviewUrl] = useState<string | null>(null);
+
+  const [referenceFile, setReferenceFile] = useState<File | null>(null);
+  const [referencePreviewUrl, setReferencePreviewUrl] = useState<string | null>(null);
+
+  const [prompt, setPrompt] = useState<string>('Add beat sync zoom on dance move, apply PUBG dark fantasy lobby color grade, velocity speed ramp, and flash cuts');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [editResult, setEditResult] = useState<EditResult | null>(null);
@@ -32,33 +37,54 @@ export default function App() {
       .catch(() => setHealthInfo(null));
   }, []);
 
-  // Update object URL for file preview
-  const handleFileSelect = (file: File | null) => {
-    if (videoPreviewUrl) {
-      URL.revokeObjectURL(videoPreviewUrl);
+  // Update object URL for user target file preview
+  const handleUserFileSelect = (file: File | null) => {
+    if (userPreviewUrl) {
+      URL.revokeObjectURL(userPreviewUrl);
     }
-    setSelectedFile(file);
+    setUserFile(file);
     if (file) {
-      setVideoPreviewUrl(URL.createObjectURL(file));
+      setUserPreviewUrl(URL.createObjectURL(file));
       setEditResult(null);
       setError(null);
     } else {
-      setVideoPreviewUrl(null);
+      setUserPreviewUrl(null);
+    }
+  };
+
+  // Update object URL for reference style video preview
+  const handleReferenceFileSelect = (file: File | null) => {
+    if (referencePreviewUrl) {
+      URL.revokeObjectURL(referencePreviewUrl);
+    }
+    setReferenceFile(file);
+    if (file) {
+      setReferencePreviewUrl(URL.createObjectURL(file));
+      setEditResult(null);
+      setError(null);
+    } else {
+      setReferencePreviewUrl(null);
     }
   };
 
   const handleStartEditing = async () => {
-    if (!selectedFile || !prompt.trim()) return;
+    if (!userFile) return;
 
     setIsLoading(true);
     setError(null);
 
     const formData = new FormData();
-    formData.append('video', selectedFile);
+    formData.append('user_video', userFile);
+    formData.append('video', userFile);
+    if (referenceFile) {
+      formData.append('reference_video', referenceFile);
+    }
     formData.append('prompt', prompt.trim());
 
+    const endpoint = referenceFile ? `${API_BASE_URL}/api/edit-with-reference` : `${API_BASE_URL}/api/edit`;
+
     try {
-      const response = await fetch(`${API_BASE_URL}/api/edit`, {
+      const response = await fetch(endpoint, {
         method: 'POST',
         body: formData,
       });
@@ -82,6 +108,7 @@ export default function App() {
       setEditResult({
         resultUrl: buildFullUrl(data.resultUrl),
         originalUrl: buildFullUrl(data.originalUrl),
+        referenceUrl: data.referenceUrl ? buildFullUrl(data.referenceUrl) : null,
         instructions: data.instructions,
         aiSource: data.aiSource,
         prompt: data.prompt,
@@ -98,26 +125,25 @@ export default function App() {
     <div className="min-h-screen pb-16 pt-6 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto space-y-8">
       {/* Header Bar */}
       <header className="glass-panel rounded-3xl p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 border border-slate-800 relative overflow-hidden shadow-2xl">
-        {/* Background glow effects */}
-        <div className="absolute -top-24 -left-24 w-72 h-72 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -top-24 -left-24 w-72 h-72 bg-amber-500/20 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute -bottom-24 -right-24 w-72 h-72 bg-purple-500/20 rounded-full blur-3xl pointer-events-none" />
 
         <div className="flex items-center gap-4 relative z-10">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/20 text-white flex-shrink-0 animate-pulse-glow">
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-amber-500 via-purple-600 to-indigo-600 flex items-center justify-center shadow-lg shadow-amber-500/20 text-white flex-shrink-0 animate-pulse-glow">
             <Video className="w-7 h-7" />
           </div>
 
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white via-slate-100 to-indigo-200">
-                AI Video Editor
+              <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white via-slate-100 to-amber-200">
+                AI Video Editor Studio Pro
               </h1>
-              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold tracking-wide uppercase bg-gradient-to-r from-indigo-500/20 to-purple-500/20 text-indigo-300 border border-indigo-500/30">
-                Gemini Flash
+              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold tracking-wide uppercase bg-gradient-to-r from-amber-500/20 to-purple-500/20 text-amber-300 border border-amber-500/30">
+                Style Cloning Engine
               </span>
             </div>
             <p className="text-xs md:text-sm text-slate-400 mt-1">
-              Upload video &rarr; Prompt instructions &rarr; Gemini parses FFmpeg commands &rarr; Instant edit
+              Raw Clip + Reference Style Video &rarr; Gemini Multimodal Analysis &rarr; FFmpeg Beat Sync Render
             </p>
           </div>
         </div>
@@ -125,9 +151,9 @@ export default function App() {
         {/* Status Indicators */}
         <div className="flex items-center gap-3 relative z-10 text-xs">
           <div className="glass-panel px-3.5 py-2 rounded-xl flex items-center gap-2 border border-slate-800">
-            <Sparkles className="w-4 h-4 text-purple-400 animate-spin" style={{ animationDuration: '6s' }} />
+            <Sparkles className="w-4 h-4 text-amber-400 animate-spin" style={{ animationDuration: '6s' }} />
             <span className="text-slate-300 font-medium">
-              Engine: <span className="text-white font-semibold">Gemini 2.5 Flash</span>
+              Engine: <span className="text-white font-semibold">Gemini 2.0 Flash</span>
             </span>
           </div>
 
@@ -138,37 +164,53 @@ export default function App() {
                 : 'bg-amber-500/10 text-amber-300 border-amber-500/30'
             }`}>
               <KeyRound className="w-3.5 h-3.5" />
-              {healthInfo.geminiKeyConfigured ? 'API Key Active' : 'Fallback Engine (Set .env)'}
+              {healthInfo.geminiKeyConfigured ? 'Gemini API Key Active' : 'Fallback Engine (Set .env)'}
             </div>
           )}
         </div>
       </header>
 
-      {/* Main Grid: Upload & Prompt Controls */}
+      {/* Main Grid: Dual Upload & Prompt Controls */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Column: Upload */}
-        <div className="lg:col-span-5 flex flex-col space-y-4">
+        {/* Left Column: Dual Video Uploaders */}
+        <div className="lg:col-span-6 flex flex-col space-y-4">
           <div className="flex items-center gap-2 text-sm font-semibold text-slate-300">
             <span className="w-6 h-6 rounded-full bg-indigo-600 text-white text-xs flex items-center justify-center font-bold">1</span>
-            Upload Video File
+            Raw Input Footage & Reference Clip
           </div>
-          <UploadZone
-            selectedFile={selectedFile}
-            onFileSelect={handleFileSelect}
-            videoPreviewUrl={videoPreviewUrl}
-          />
+
+          <div className="space-y-4">
+            <UploadZone
+              selectedFile={userFile}
+              onFileSelect={handleUserFileSelect}
+              videoPreviewUrl={userPreviewUrl}
+              title="Target Raw Video (Footage to edit)"
+              badge="Primary Raw Input"
+              accentColor="indigo"
+            />
+
+            <UploadZone
+              selectedFile={referenceFile}
+              onFileSelect={handleReferenceFileSelect}
+              videoPreviewUrl={referencePreviewUrl}
+              title="Reference Style Video (Optional)"
+              badge="AI Style Cloning Source"
+              accentColor="amber"
+            />
+          </div>
         </div>
 
-        {/* Right Column: Edit Prompt */}
-        <div className="lg:col-span-7 flex flex-col space-y-4">
+        {/* Right Column: Edit Prompt & AI Controls */}
+        <div className="lg:col-span-6 flex flex-col space-y-4">
           <div className="flex items-center justify-between text-sm font-semibold text-slate-300">
             <div className="flex items-center gap-2">
               <span className="w-6 h-6 rounded-full bg-purple-600 text-white text-xs flex items-center justify-center font-bold">2</span>
-              Describe Desired Edits
+              AI Prompt & Style Guidance
             </div>
-            {selectedFile && (
-              <span className="text-xs text-emerald-400 flex items-center gap-1">
-                <CheckCircle2 className="w-3.5 h-3.5" /> Video Ready
+            {userFile && (
+              <span className="text-xs text-emerald-400 flex items-center gap-1 font-semibold">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                {referenceFile ? 'Cloning Enabled' : 'Video Ready'}
               </span>
             )}
           </div>
@@ -178,7 +220,7 @@ export default function App() {
             setPrompt={setPrompt}
             onSubmit={handleStartEditing}
             isLoading={isLoading}
-            disabled={!selectedFile}
+            disabled={!userFile}
           />
         </div>
       </div>
@@ -196,22 +238,27 @@ export default function App() {
 
       {/* Loading Progress State Banner */}
       {isLoading && (
-        <div className="glass-panel rounded-2xl p-6 border border-indigo-500/30 space-y-4 relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-indigo-500/10 animate-pulse" />
+        <div className="glass-panel rounded-2xl p-6 border border-amber-500/30 space-y-4 relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-r from-amber-500/10 via-purple-500/10 to-indigo-500/10 animate-pulse" />
           <div className="flex items-center justify-between relative z-10">
             <div className="flex items-center gap-3">
-              <RefreshCw className="w-5 h-5 text-indigo-400 animate-spin" />
+              <RefreshCw className="w-5 h-5 text-amber-400 animate-spin" />
               <div>
-                <h4 className="font-semibold text-slate-100 text-sm">Editing Video in Progress...</h4>
-                <p className="text-xs text-slate-400">Gemini Flash AI is parsing options and FFmpeg is re-encoding the stream.</p>
+                <h4 className="font-semibold text-slate-100 text-sm">
+                  {referenceFile ? 'Cloning Reference Video Style & Rendering...' : 'Executing AI Video Edit...'}
+                </h4>
+                <p className="text-xs text-slate-400">
+                  Gemini Flash AI is extracting beat sync zooms, velocity ramps, and FFmpeg filter graphs.
+                </p>
               </div>
             </div>
-            <span className="text-xs font-mono text-indigo-300 animate-pulse">FFmpeg Running</span>
+            <span className="text-xs font-mono text-amber-300 animate-pulse">
+              {referenceFile ? 'Style Transfer Running' : 'FFmpeg Active'}
+            </span>
           </div>
 
-          {/* Progress bar animation */}
           <div className="w-full h-2 rounded-full bg-slate-900 overflow-hidden relative border border-slate-800">
-            <div className="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-cyan-400 w-full animate-pulse" />
+            <div className="h-full bg-gradient-to-r from-amber-500 via-purple-500 to-indigo-500 w-full animate-pulse" />
           </div>
         </div>
       )}
@@ -223,29 +270,38 @@ export default function App() {
             <div className="flex items-center gap-2">
               <span className="w-6 h-6 rounded-full bg-emerald-600 text-white text-xs flex items-center justify-center font-bold">3</span>
               <h2 className="text-xl font-bold text-slate-100 flex items-center gap-2">
-                Video Edit Results
+                Cloned Video Results
               </h2>
             </div>
             <span className="text-xs text-slate-400">
-              Output format: MP4 (H.264 / AAC)
+              Render Format: MP4 (H.264 / AAC)
             </span>
           </div>
 
-          {/* Side-by-Side Video Players */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Side-by-Side 3-Way Video Players */}
+          <div className={`grid grid-cols-1 ${editResult.referenceUrl ? 'md:grid-cols-3' : 'md:grid-cols-2'} gap-6`}>
             <VideoPlayer
-              title="Original Upload"
+              title="Target Raw Input"
               videoUrl={editResult.originalUrl}
-              badge="Source File"
+              badge="Raw Clip"
               badgeType="original"
             />
 
+            {editResult.referenceUrl && (
+              <VideoPlayer
+                title="Reference Style Clip"
+                videoUrl={editResult.referenceUrl}
+                badge="Style Source"
+                badgeType="original"
+              />
+            )}
+
             <VideoPlayer
-              title="AI Edited Result"
+              title="AI Cloned Output Result"
               videoUrl={editResult.resultUrl}
-              badge="FFmpeg Processed"
+              badge="FFmpeg Rendered"
               badgeType="result"
-              downloadName={`edited-${Date.now()}.mp4`}
+              downloadName={`cloned-video-${Date.now()}.mp4`}
             />
           </div>
 
