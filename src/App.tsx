@@ -13,6 +13,8 @@ interface EditResult {
   prompt: string;
 }
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1' ? 'http://localhost:3001' : '');
+
 export default function App() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [videoPreviewUrl, setVideoPreviewUrl] = useState<string | null>(null);
@@ -24,7 +26,7 @@ export default function App() {
 
   // Check backend status on mount
   useEffect(() => {
-    fetch('/api/health')
+    fetch(`${API_BASE_URL}/api/health`)
       .then((res) => res.json())
       .then((data) => setHealthInfo(data))
       .catch(() => setHealthInfo(null));
@@ -56,7 +58,7 @@ export default function App() {
     formData.append('prompt', prompt.trim());
 
     try {
-      const response = await fetch('/api/edit', {
+      const response = await fetch(`${API_BASE_URL}/api/edit`, {
         method: 'POST',
         body: formData,
       });
@@ -75,9 +77,11 @@ export default function App() {
         throw new Error(data.error || 'Failed to edit video');
       }
 
+      const buildFullUrl = (urlPath: string) => urlPath.startsWith('http') ? urlPath : `${API_BASE_URL}${urlPath}`;
+
       setEditResult({
-        resultUrl: data.resultUrl,
-        originalUrl: data.originalUrl,
+        resultUrl: buildFullUrl(data.resultUrl),
+        originalUrl: buildFullUrl(data.originalUrl),
         instructions: data.instructions,
         aiSource: data.aiSource,
         prompt: data.prompt,
