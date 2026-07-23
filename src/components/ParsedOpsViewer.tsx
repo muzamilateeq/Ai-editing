@@ -71,10 +71,24 @@ export const ParsedOpsViewer: React.FC<ParsedOpsViewerProps> = ({
 
       {/* Parameter Badges */}
       <div className="flex flex-wrap gap-2 pt-1">
-        {instructions.upscale && (
+        {(instructions.upscale || instructions.upscaleTarget === '4K') && (
           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/20 border border-amber-500/40 text-xs text-amber-200 shadow-sm font-bold">
             <Crown className="w-3.5 h-3.5 text-amber-400" />
-            Output Quality: <span className="font-mono text-amber-300">{instructions.upscale.target || '4K'} Sharpened</span>
+            Output Quality: <span className="font-mono text-amber-300">{instructions.upscaleTarget || instructions.upscale?.target || '4K'} Ultra HD</span>
+          </div>
+        )}
+
+        {instructions.fps60 && (
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-xs text-emerald-200 shadow-sm font-semibold">
+            <Gauge className="w-3.5 h-3.5 text-emerald-400" />
+            Frame Rate: <span className="font-mono text-emerald-300">Smooth 60 FPS</span>
+          </div>
+        )}
+
+        {instructions.highGraphicsColor && (
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-purple-500/10 border border-purple-500/30 text-xs text-purple-200 shadow-sm font-semibold">
+            <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+            Graphics: <span className="font-mono text-purple-300">High Graphics Color Boost</span>
           </div>
         )}
         {instructions.colorPreset === 'pubg_dark_fantasy' && (

@@ -143,6 +143,14 @@ export async function processVideoWithFFmpeg(
       videoFilters.push('transpose=2');
     }
 
+    // --- Smooth 60FPS & High Graphics Color ---
+    if (instructions.fps60) {
+      videoFilters.push('fps=fps=60');
+    }
+    if (instructions.highGraphicsColor) {
+      videoFilters.push('eq=contrast=1.3:brightness=0.02:saturation=1.5,colorchannelmixer=rr=1.1:gg=1.1:bb=1.1');
+    }
+
     // --- Resolution & Quality Upscaling ---
     let renderOptions = [
       '-preset ultrafast',
@@ -151,8 +159,9 @@ export async function processVideoWithFFmpeg(
       '-movflags +faststart'
     ];
 
-    if (instructions.upscale) {
-      const qGraph = buildQualityFilterGraph(instructions.upscale, instructions.aspectRatio);
+    if (instructions.upscale || instructions.upscaleTarget === '4K' || instructions.crf === 14) {
+      const targetRes = instructions.upscaleTarget || instructions.upscale?.target || '4K';
+      const qGraph = buildQualityFilterGraph({ target: targetRes, mode: 'pro_master', sharpening: 0.6, denoise: true }, instructions.aspectRatio);
       videoFilters.push(...qGraph.filters);
       renderOptions = qGraph.outputOptions;
     }
