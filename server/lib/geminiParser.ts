@@ -172,9 +172,9 @@ export async function parseVideoEditPrompt(prompt: string): Promise<{ instructio
   try {
     const ai = new GoogleGenAI({ apiKey });
     
-    // Call Gemini 2.5 Flash model
+    // Call Gemini 2.0 Flash model
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-2.0-flash',
       contents: prompt,
       config: {
         systemInstruction: SYSTEM_PROMPT,
