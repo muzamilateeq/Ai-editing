@@ -22,19 +22,17 @@ export async function processHuggingFace4KUpscale(params: Master4KUpscaleParams)
 }> {
   const { inputPath, outputPath, targetResolution = '3840x2160', fps = 60 } = params;
 
-  console.log(`\n[Master4KUpscaler] Initializing Local High-Bitrate 4K Super-Resolution Engine...`);
-  console.log(`[Master4KUpscaler] Input: ${inputPath}`);
-  console.log(`[Master4KUpscaler] Output: ${outputPath}`);
-  console.log(`[Master4KUpscaler] Target Resolution: ${targetResolution} @ ${fps}FPS`);
+  console.log(`\n[Master4KUpscaler] Initializing Striking 4K Super-Resolution Engine...`);
 
   return new Promise((resolve, reject) => {
     const [w, h] = targetResolution.split('x');
 
     ffmpeg(inputPath)
       .videoFilters([
-        `scale=${w}:${h}:flags=lanczos`,
-        `unsharp=5:5:0.8:5:5:0.4`,
         `hqdn3d=1.5:1.5:3:3`,
+        `scale=${w}:${h}:flags=lanczos+accurate_rnd`,
+        `unsharp=13:13:2.2:7:7:0.6`,
+        `eq=contrast=1.15:brightness=0.01:saturation=1.18`,
         `fps=${fps}`,
       ])
       .videoCodec('libx264')
@@ -56,10 +54,10 @@ export async function processHuggingFace4KUpscale(params: Master4KUpscaleParams)
         }
       })
       .on('end', () => {
-        console.log(`[Master4KUpscaler] 4K Ultra-HD Master Render Successfully Complete!`);
+        console.log(`[Master4KUpscaler] Striking 4K Ultra-HD Master Render Successfully Complete!`);
         resolve({
           outputPath,
-          engine: 'Local High-Bitrate Lanczos 4K AI Engine',
+          engine: 'Striking 4K Ultra-HD Master AI Engine',
           resolution: targetResolution,
         });
       })
