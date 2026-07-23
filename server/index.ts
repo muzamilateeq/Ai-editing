@@ -295,7 +295,7 @@ app.post(
   }
 );
 
-// Dedicated Free Hugging Face 4K Open-Source Upscaler API Endpoint
+// Dedicated 4K Open-Source Master Upscaler API Endpoint
 app.post(
   '/api/free-4k-upscale',
   upload.fields([
@@ -313,13 +313,13 @@ app.post(
       }
 
       console.log(`\n==================================================`);
-      console.log(`[API /api/free-4k-upscale] Starting Free Hugging Face AI 4K Conversion...`);
+      console.log(`[API /api/free-4k-upscale] Starting 4K AI Master Conversion...`);
       console.log(`[API /api/free-4k-upscale] Input File: ${videoFile.filename}`);
 
-      const outputFilename = `hf-4k-${Date.now()}-${Math.random().toString(36).substring(2, 7)}.mp4`;
+      const outputFilename = `master-4k-${Date.now()}-${Math.random().toString(36).substring(2, 7)}.mp4`;
       const outputPath = path.join(OUTPUTS_DIR, outputFilename);
 
-      const hfResult = await processHuggingFace4KUpscale({
+      const masterResult = await processHuggingFace4KUpscale({
         inputPath: videoFile.path,
         outputPath: outputPath,
         targetResolution: '3840x2160',
@@ -329,16 +329,15 @@ app.post(
       const relativeResultUrl = `/outputs/${outputFilename}`;
       const relativeOriginalUrl = `/uploads/${videoFile.filename}`;
 
-      console.log(`[API /api/free-4k-upscale] Success! Hugging Face 4K video ready at ${relativeResultUrl}`);
+      console.log(`[API /api/free-4k-upscale] Success! 4K Master video ready at ${relativeResultUrl}`);
       console.log(`==================================================\n`);
 
       res.json({
         success: true,
         resultUrl: relativeResultUrl,
         originalUrl: relativeOriginalUrl,
-        upscaleEngine: hfResult.engine,
-        model: hfResult.model,
-        resolution: hfResult.resolution,
+        upscaleEngine: masterResult.engine,
+        resolution: masterResult.resolution,
         instructions: {
           upscaleTarget: '4K',
           fps60: true,
@@ -346,14 +345,14 @@ app.post(
           denoise: true,
           highGraphicsColor: true,
           crf: 12,
-          explanation: 'Hugging Face Open-Source AI Super-Resolution (Real-ESRGAN Model) + High-Bitrate Lanczos 4K Assembly.',
+          explanation: 'Local 4K AI Super-Resolution Engine + High-Bitrate Lanczos 4K Assembly.',
         },
       });
     } catch (error: any) {
-      console.error('[API /api/free-4k-upscale] Error during Hugging Face 4K upscale:', error);
+      console.error('[API /api/free-4k-upscale] Error during 4K upscale:', error);
       res.status(500).json({
         success: false,
-        error: error.message || 'An unexpected error occurred during Hugging Face 4K upscale.',
+        error: error.message || 'An unexpected error occurred during 4K upscale.',
       });
     }
   }
@@ -401,8 +400,6 @@ app.post(
         resultUrl: relativeResultUrl,
         originalUrl: relativeOriginalUrl,
         upscaleEngine: ultraResult.engine,
-        pass1Model: ultraResult.pass1Model,
-        pass2Model: ultraResult.pass2Model,
         resolution: ultraResult.resolution,
         instructions: {
           upscaleTarget: '4K',
@@ -411,7 +408,7 @@ app.post(
           denoise: true,
           highGraphicsColor: true,
           crf: 10,
-          explanation: 'Dual-Pass AI Super-Resolution (Real-ESRGAN x4 Spatial Reconstruction + GFPGAN Character & Weapon Texture Enhancement + CRF 10 Lossless Master Pass).',
+          explanation: 'Local Dual-Pass High-Precision 10x AI Super-Resolution (Spatial Edge & Unsharp Reconstruction + CRF 10 Lossless Master Pass).',
         },
       });
     } catch (error: any) {

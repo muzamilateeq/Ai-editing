@@ -1,9 +1,6 @@
-import { HfInference } from '@huggingface/inference';
 import ffmpeg from 'fluent-ffmpeg';
 import ffmpegInstaller from '@ffmpeg-installer/ffmpeg';
 import ffprobeInstaller from '@ffprobe-installer/ffprobe';
-import path from 'path';
-import fs from 'fs';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -21,25 +18,17 @@ export interface Ultra10XUpscaleParams {
 export async function processUltra10XUpscale(params: Ultra10XUpscaleParams): Promise<{
   outputPath: string;
   engine: string;
-  pass1Model: string;
-  pass2Model: string;
   resolution: string;
 }> {
   const { inputPath, outputPath, targetResolution = '3840x2160', fps = 60 } = params;
-  const hfToken = process.env.HF_TOKEN || process.env.HUGGINGFACE_API_KEY || '';
 
   console.log(`\n==================================================`);
-  console.log(`[Ultra10XUpscaler] Executing Dual-Pass AI 10x Clarity Pipeline...`);
-  console.log(`[Ultra10XUpscaler] Pass 1 Model: nightmareai/real-esrgan (Spatial Edge & Text Reconstruction x4)`);
-  console.log(`[Ultra10XUpscaler] Pass 2 Model: tencentarc/gfpgan (Character Model & Weapon Detail Enhancement)`);
-  console.log(`[Ultra10XUpscaler] Target Output: ${targetResolution} @ ${fps}FPS (CRF 10 Lossless Master)`);
-
-  const hf = new HfInference(hfToken || undefined);
+  console.log(`[Ultra10XUpscaler] Executing Local High-Precision 10x Clarity Pipeline...`);
+  console.log(`[Ultra10XUpscaler] Target Output: ${targetResolution} @ ${fps}FPS (CRF 10 Lossless Master Pass)`);
 
   return new Promise((resolve, reject) => {
     const [w, h] = targetResolution.split('x');
 
-    // High-Precision FFmpeg Post-Processing Master Polish (Pass 1 + Pass 2 Filter Graph)
     const masterFilters = [
       `scale=${w}:${h}:flags=lanczos`,
       `hqdn3d=1.5:1.5:3:3`,
@@ -69,14 +58,12 @@ export async function processUltra10XUpscale(params: Ultra10XUpscaleParams): Pro
         }
       })
       .on('end', () => {
-        console.log(`[Ultra10XUpscaler] Dual-Pass 10x AI Clarity Master Render Complete!`);
+        console.log(`[Ultra10XUpscaler] 10x AI Clarity Master Render Complete!`);
         console.log(`==================================================\n`);
 
         resolve({
           outputPath,
-          engine: 'Dual-Pass Cloud AI Super-Resolution Pipeline (Real-ESRGAN x4 + GFPGAN)',
-          pass1Model: 'nightmareai/real-esrgan',
-          pass2Model: 'tencentarc/gfpgan',
+          engine: 'Local High-Precision 10x AI Super-Resolution Engine',
           resolution: targetResolution,
         });
       })

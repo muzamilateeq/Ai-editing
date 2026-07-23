@@ -1,5 +1,5 @@
 import React from 'react';
-import { Crown, Sparkles, Zap, Tv, Bot } from 'lucide-react';
+import { Crown, Sparkles, Zap, Tv, Sparkle } from 'lucide-react';
 import type { UpscaleOption } from '../../server/lib/qualityEnhancer';
 
 interface ResolutionSelectorProps {
@@ -17,8 +17,8 @@ export const ResolutionSelector: React.FC<ResolutionSelectorProps> = ({
     {
       id: '1080p',
       label: '1080p Full HD',
-      sub: 'Fast Local FFmpeg • 1920x1080',
-      badge: 'Local FFmpeg',
+      sub: 'Fast Render • 1920x1080',
+      badge: 'Standard',
       icon: <Tv className="w-4 h-4 text-indigo-400" />,
     },
     {
@@ -30,9 +30,9 @@ export const ResolutionSelector: React.FC<ResolutionSelectorProps> = ({
     },
     {
       id: '4K',
-      label: '4K Ultra HD AI',
-      sub: '🤗 Hugging Face AI • 3840x2160',
-      badge: 'Hugging Face AI',
+      label: '4K Ultra HD',
+      sub: 'Crisp Master • 3840x2160',
+      badge: '4K Master',
       icon: <Crown className="w-4 h-4 text-amber-400" />,
     },
   ];
@@ -42,10 +42,10 @@ export const ResolutionSelector: React.FC<ResolutionSelectorProps> = ({
       <div className="flex items-center justify-between">
         <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
           <Zap className="w-3.5 h-3.5 text-amber-400" />
-          Output Resolution & AI Engine Router
+          Output Resolution & Quality Engine
         </label>
         <span className="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-amber-300 font-mono flex items-center gap-1">
-          <Bot className="w-3 h-3 text-amber-400" /> Hugging Face Active on 4K
+          <Sparkle className="w-3 h-3 text-amber-400" /> 4K Ultra-HD Crisp Engine
         </span>
       </div>
 
