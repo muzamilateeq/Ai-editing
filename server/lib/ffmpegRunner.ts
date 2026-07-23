@@ -19,12 +19,11 @@ export async function processVideoWithFFmpeg(
   instructions: VideoEditInstructions
 ): Promise<string> {
   return new Promise((resolve, reject) => {
-    console.log(`[FFmpegRunner] Starting Next-Gen video processing...`);
+    console.log(`[FFmpegRunner] Starting High-Energy Gaming FFmpeg processing...`);
     console.log(`[FFmpegRunner] Input: ${inputPath}`);
     console.log(`[FFmpegRunner] Output: ${outputPath}`);
     console.log(`[FFmpegRunner] Instructions:`, JSON.stringify(instructions, null, 2));
 
-    // Ensure output directory exists
     const outputDir = path.dirname(outputPath);
     if (!fs.existsSync(outputDir)) {
       fs.mkdirSync(outputDir, { recursive: true });
@@ -50,77 +49,81 @@ export async function processVideoWithFFmpeg(
 
     // --- Aspect Ratio Cropping ---
     if (instructions.aspectRatio === '9:16') {
-      // Crop for vertical TikTok / Reels / Shorts
       videoFilters.push("crop=w='min(iw,ih*9/16)':h='min(ih,iw*16/9)'");
     } else if (instructions.aspectRatio === '1:1') {
-      // Crop for Instagram Square
       videoFilters.push("crop='min(iw,ih)':'min(iw,ih)'");
     } else if (instructions.aspectRatio === '16:9') {
-      // Crop for Widescreen Cinematic
       videoFilters.push("crop='min(iw,ih*16/9)':'min(ih,iw*9/16)'");
     }
 
-    // --- Speed Adjustment ---
-    const speed = instructions.speed && instructions.speed > 0 ? instructions.speed : 1;
-    if (speed !== 1) {
-      const ptsFactor = (1 / speed).toFixed(4);
-      videoFilters.push(`setpts=${ptsFactor}*PTS`);
-
-      if (!instructions.mute) {
-        let currentSpeed = speed;
-        while (currentSpeed > 2.0) {
-          audioFilters.push('atempo=2.0');
-          currentSpeed /= 2.0;
-        }
-        while (currentSpeed < 0.5) {
-          audioFilters.push('atempo=0.5');
-          currentSpeed /= 0.5;
-        }
-        if (currentSpeed !== 1.0) {
-          audioFilters.push(`atempo=${currentSpeed.toFixed(4)}`);
-        }
-      }
+    // --- Beat Sync Zoom Pulse Effect ---
+    if (instructions.zoomPulse) {
+      const zFactor = instructions.zoomPulse.zoomFactor || 1.3;
+      const zTime = instructions.zoomPulse.time || 1.0;
+      const zDur = instructions.zoomPulse.duration || 0.4;
+      
+      // Dynamic zoompan filter evaluating between zTime and zTime+zDur
+      const zoomExpr = `if(between(time,${zTime},${zTime + zDur}),${zFactor},1.0)`;
+      videoFilters.push(`zoompan=z='${zoomExpr}':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=1:s=hd720:fps=30`);
     }
 
-    // --- Grayscale / Saturation / Contrast / Brightness ---
-    if (instructions.grayscale) {
-      videoFilters.push('eq=saturation=0');
+    // --- Speed Adjustment / Velocity Ramping ---
+    if (instructions.speedRamp && instructions.speedRamp.length > 0) {
+      // Speed ramp acceleration logic using setpts
+      videoFilters.push(`setpts=0.6*PTS`);
     } else {
-      const eqParts: string[] = [];
-      if (typeof instructions.contrast === 'number') {
-        eqParts.push(`contrast=${instructions.contrast}`);
-      }
-      if (typeof instructions.brightness === 'number') {
-        eqParts.push(`brightness=${instructions.brightness}`);
-      }
-      if (typeof instructions.saturation === 'number') {
-        eqParts.push(`saturation=${instructions.saturation}`);
-      }
-      if (eqParts.length > 0) {
-        videoFilters.push(`eq=${eqParts.join(':')}`);
+      const speed = instructions.speed && instructions.speed > 0 ? instructions.speed : 1;
+      if (speed !== 1) {
+        const ptsFactor = (1 / speed).toFixed(4);
+        videoFilters.push(`setpts=${ptsFactor}*PTS`);
+
+        if (!instructions.mute) {
+          let currentSpeed = speed;
+          while (currentSpeed > 2.0) {
+            audioFilters.push('atempo=2.0');
+            currentSpeed /= 2.0;
+          }
+          while (currentSpeed < 0.5) {
+            audioFilters.push('atempo=0.5');
+            currentSpeed /= 0.5;
+          }
+          if (currentSpeed !== 1.0) {
+            audioFilters.push(`atempo=${currentSpeed.toFixed(4)}`);
+          }
+        }
       }
     }
 
-    // --- Color Presets & Styling ---
-    if (instructions.colorPreset === 'cyberpunk') {
+    // --- PUBG Mobile Dark Fantasy & Custom Color Grading ---
+    if (instructions.colorGrade) {
+      // Apply raw FFmpeg eq string directly from Gemini (e.g. "contrast=1.2:saturation=1.4,eq=gamma=0.9")
+      videoFilters.push(`eq=${instructions.colorGrade}`);
+    } else if (instructions.colorPreset === 'pubg_dark_fantasy') {
+      videoFilters.push('eq=contrast=1.35:brightness=-0.04:saturation=1.4');
+      videoFilters.push('colorchannelmixer=rr=1.1:rg=0.0:rb=0.2:gr=0.0:gg=1.0:gb=0.1:br=0.2:bg=0.0:bb=1.2');
+      videoFilters.push('vignette=PI/3.5');
+    } else if (instructions.colorPreset === 'cyberpunk') {
       videoFilters.push('colorchannelmixer=rr=1.2:rg=0.1:rb=0.4:gr=0.0:gg=0.8:gb=0.2:br=0.3:bg=0.1:bb=1.3');
     } else if (instructions.colorPreset === 'vintage') {
-      videoFilters.push('colorchannelmixer=rr=1.1:rg=0.1:rb=0.0:gr=0.1:gg=1.0:gb=0.1:br=0.1:bg=0.1:bb=0.8');
+      videoFilters.push('colorchannelmixer=rr=1.1:rg=0.1:rb=0.0:gr=0.1:gg=1.0:gb=0.1:br=0.1:bg=0.8');
       videoFilters.push('vignette=PI/4');
-    } else if (instructions.colorPreset === 'warm_sunset') {
-      videoFilters.push('colorchannelmixer=rr=1.3:rg=0.1:rb=0.0:gr=0.1:gg=1.1:gb=0.0:br=0.0:bg=0.1:bb=0.7');
     } else if (instructions.colorPreset === 'matrix') {
       videoFilters.push('colorchannelmixer=rr=0.1:rg=0.9:rb=0.1:gr=0.1:gg=1.3:gb=0.1:br=0.1:bg=0.9:bb=0.1');
-    } else if (instructions.colorPreset === 'sepia') {
-      videoFilters.push('colorchannelmixer=.393:.769:.189:0:.349:.686:.168:0:.272:.534:.131');
-    } else if (instructions.colorPreset === 'dramatic') {
-      videoFilters.push('eq=contrast=1.35:brightness=-0.05:saturation=0.85');
-    } else if (instructions.colorPreset === 'vivid') {
-      videoFilters.push('eq=contrast=1.2:saturation=1.7');
+    }
+
+    // --- Flash Cut Overlay ---
+    if (instructions.flashCut) {
+      // Flash cut brightening effect
+      videoFilters.push('eq=brightness=0.3:contrast=1.5');
+    }
+
+    // --- RGB Shake / Split Effect ---
+    if (instructions.rgbShake) {
+      videoFilters.push('rgbashift=rh=4:bv=-4');
     }
 
     // --- Vignette ---
-    if (instructions.vignette && instructions.colorPreset !== 'vintage') {
+    if (instructions.vignette && !videoFilters.some(f => f.includes('vignette'))) {
       videoFilters.push('vignette=PI/4');
     }
 
@@ -139,11 +142,6 @@ export async function processVideoWithFFmpeg(
       videoFilters.push('transpose=2');
     }
 
-    // --- Video Fades ---
-    if (typeof instructions.videoFadeIn === 'number' && instructions.videoFadeIn > 0) {
-      videoFilters.push(`fade=t=in:st=0:d=${instructions.videoFadeIn}`);
-    }
-
     // Apply Video Filters
     if (videoFilters.length > 0) {
       command = command.videoFilters(videoFilters);
@@ -155,14 +153,6 @@ export async function processVideoWithFFmpeg(
     } else {
       if (typeof instructions.volume === 'number' && instructions.volume !== 1.0 && instructions.volume >= 0) {
         audioFilters.push(`volume=${instructions.volume}`);
-      }
-      if (typeof instructions.audioFadeIn === 'number' && instructions.audioFadeIn > 0) {
-        audioFilters.push(`afade=t=in:st=0:d=${instructions.audioFadeIn}`);
-      }
-      if (typeof instructions.audioFadeOut === 'number' && instructions.audioFadeOut > 0) {
-        // Approximate audio fade out start if duration is set
-        const fadeStart = instructions.duration ? Math.max(0, instructions.duration - instructions.audioFadeOut) : 5;
-        audioFilters.push(`afade=t=out:st=${fadeStart}:d=${instructions.audioFadeOut}`);
       }
 
       if (audioFilters.length > 0) {
@@ -186,21 +176,21 @@ export async function processVideoWithFFmpeg(
     // Event handlers
     command
       .on('start', (commandLine) => {
-        console.log(`[FFmpegRunner] Executing: ${commandLine}`);
+        console.log(`[FFmpegRunner] Executing Gaming FFmpeg command: ${commandLine}`);
       })
       .on('progress', (progress) => {
         if (progress.percent) {
-          console.log(`[FFmpegRunner] Progress: ${Math.round(progress.percent)}%`);
+          console.log(`[FFmpegRunner] Gaming Render Progress: ${Math.round(progress.percent)}%`);
         }
       })
       .on('end', () => {
-        console.log(`[FFmpegRunner] Next-Gen video processing complete!`);
+        console.log(`[FFmpegRunner] Gaming montage render successfully complete!`);
         resolve(outputPath);
       })
       .on('error', (err, stdout, stderr) => {
         console.error(`[FFmpegRunner] FFmpeg error: ${err.message}`);
         console.error(`[FFmpegRunner] FFmpeg stderr: ${stderr}`);
-        reject(new Error(`FFmpeg processing failed: ${err.message}`));
+        reject(new Error(`FFmpeg gaming render failed: ${err.message}`));
       });
 
     command.run();

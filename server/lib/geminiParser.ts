@@ -3,6 +3,22 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+export interface SpeedRampSegment {
+  start: number;
+  end: number;
+  speed: number;
+}
+
+export interface ZoomPulse {
+  time: number;
+  zoomFactor: number; // e.g. 1.2 to 1.5
+  duration: number;   // e.g. 0.3 to 0.6 seconds
+}
+
+export interface FlashCut {
+  time: number;
+}
+
 export interface VideoEditInstructions {
   trimStart?: number;
   trimEnd?: number;
@@ -14,55 +30,68 @@ export interface VideoEditInstructions {
   flipHorizontal?: boolean;
   flipVertical?: boolean;
   rotate?: 90 | 180 | 270;
-  
-  // Advanced AI Features
+
+  // Advanced PUBG & Gaming Edit Specs
   aspectRatio?: '9:16' | '1:1' | '16:9';
-  colorPreset?: 'cyberpunk' | 'vintage' | 'warm_sunset' | 'matrix' | 'dramatic' | 'sepia' | 'vivid';
+  colorPreset?: 'pubg_dark_fantasy' | 'cyberpunk' | 'vintage' | 'warm_sunset' | 'matrix' | 'dramatic' | 'sepia' | 'vivid';
   contrast?: number;      // 0.5 to 2.0
   brightness?: number;    // -0.5 to 0.5
   saturation?: number;    // 0.0 to 3.0
   vignette?: boolean;
-  audioFadeIn?: number;   // seconds
-  audioFadeOut?: number;  // seconds
-  videoFadeIn?: number;   // seconds
-  videoFadeOut?: number;  // seconds
+  audioFadeIn?: number;   
+  audioFadeOut?: number;  
+  videoFadeIn?: number;   
+  videoFadeOut?: number;  
+
+  // Gaming Specific FX
+  speedRamp?: SpeedRampSegment[];
+  zoomPulse?: ZoomPulse;
+  colorGrade?: string;    // Custom raw FFmpeg eq string e.g. "contrast=1.3:saturation=1.4,eq=gamma=0.9"
+  flashCut?: FlashCut;
+  rgbShake?: boolean;
 
   explanation?: string;
 }
 
 const SYSTEM_PROMPT = `
-You are an advanced Next-Gen AI Video Editing Assistant powered by Gemini 2.5 Flash.
-Your job is to analyze any natural language request (simple or complex creative prompt) and extract comprehensive FFmpeg processing parameters.
+You are an elite Gaming Video Systems Engineer & AI Montage Specialist.
+Your task is to analyze natural language editing prompts (specifically high-energy gaming clips like PUBG Mobile lobby/emotes) and convert them into structured FFmpeg JSON parameters.
 
-Output ONLY valid JSON adhering strictly to this schema:
+You MUST parse user requests into structured JSON matching this EXACT schema:
 {
-  "trimStart": number or null (seconds to skip from beginning),
-  "trimEnd": number or null (absolute timestamp in seconds to end clip),
-  "duration": number or null (total duration of edited clip in seconds),
-  "speed": number or null (playback speed multiplier: e.g. 0.5 for slow motion, 1.5, 2.0, 3.0),
-  "mute": boolean (true if audio should be stripped),
-  "volume": number or null (audio volume multiplier, e.g. 0.5 for half, 2.0 for double boost),
-  "grayscale": boolean (true for black and white / monochrome),
-  "flipHorizontal": boolean (true for horizontal mirror),
-  "flipVertical": boolean (true for upside down flip),
-  "rotate": number (90, 180, or 270 degrees clockwise rotation if requested, else null),
-  "aspectRatio": string or null ("9:16" for TikTok/Reels vertical, "1:1" for Instagram square, "16:9" for widescreen),
-  "colorPreset": string or null ("cyberpunk", "vintage", "warm_sunset", "matrix", "dramatic", "sepia", "vivid"),
-  "contrast": number or null (contrast adjustment, e.g. 1.2 to 1.5 for high contrast),
-  "brightness": number or null (brightness shift, e.g. 0.1 for brighter, -0.1 for darker),
-  "saturation": number or null (color saturation shift, e.g. 1.5 for vibrant colors, 0.0 for grayscale),
-  "vignette": boolean (true if cinematic dark border vignette effect requested),
-  "audioFadeIn": number or null (audio fade-in duration in seconds, e.g. 1.0),
-  "audioFadeOut": number or null (audio fade-out duration in seconds, e.g. 1.5),
-  "videoFadeIn": number or null (video fade-in duration in seconds),
-  "videoFadeOut": number or null (video fade-out duration in seconds),
-  "explanation": string (A crisp 1-2 sentence professional creative summary of all applied edits)
+  "trimStart": number or null (seconds to skip from start),
+  "trimEnd": number or null (absolute timestamp to end clip),
+  "duration": number or null (duration in seconds),
+  "speed": number or null (overall speed multiplier, e.g., 1.5 for 1.5x fast-forward),
+  "speedRamp": [
+    { "start": 0, "end": 1.5, "speed": 0.5 },
+    { "start": 1.5, "end": 3.0, "speed": 2.0 }
+  ] or null,
+  "zoomPulse": {
+    "time": 1.2,
+    "zoomFactor": 1.3,
+    "duration": 0.4
+  } or null,
+  "flashCut": {
+    "time": 1.2
+  } or null,
+  "rgbShake": boolean or null,
+  "colorPreset": string or null ("pubg_dark_fantasy", "cyberpunk", "vintage", "matrix", "dramatic", "vivid"),
+  "colorGrade": string or null (e.g. "contrast=1.3:saturation=1.4,eq=gamma=0.9"),
+  "aspectRatio": string or null ("9:16", "1:1", "16:9"),
+  "mute": boolean (true if audio should be silenced),
+  "volume": number or null (audio multiplier),
+  "vignette": boolean (true for dark border vignette),
+  "explanation": string (A crisp 1-2 sentence description of the gaming montage edits)
 }
 
 Rules:
-1. Return ONLY pure valid JSON. No markdown backticks.
-2. Infer creative presets if the user specifies moods (e.g. "make it like a 80s movie" -> vintage + vignette, "make it a TikTok reel" -> aspect 9:16 + speed 1.25x).
-3. Keep parameter ranges realistic and harmonized for high video quality.
+1. Return ONLY pure valid JSON. Never output markdown code block wrappers if possible.
+2. If the user mentions PUBG, lobby, emote, dance move, or gaming montage:
+   - Infer "pubg_dark_fantasy" color grade (or colorGrade: "contrast=1.3:saturation=1.5,eq=gamma=0.85").
+   - Add zoomPulse / beat sync zoom on key action timestamps (e.g. at 1.0s to 1.5s).
+   - Set flashCut or speedRamp velocity where requested.
+3. Keep numerical values realistic and safe for FFmpeg rendering.
 `;
 
 /**
@@ -71,7 +100,7 @@ Rules:
 function fallbackRuleBasedParser(prompt: string): VideoEditInstructions {
   const lower = prompt.toLowerCase();
   const result: VideoEditInstructions = {
-    explanation: `Parsed prompt via rule-based AI engine: "${prompt}"`,
+    explanation: `Parsed gaming edit prompt via rule-based AI engine: "${prompt}"`,
   };
 
   // Trimming
@@ -80,79 +109,49 @@ function fallbackRuleBasedParser(prompt: string): VideoEditInstructions {
     result.trimStart = parseFloat(trimStartMatch[1]);
   }
 
-  // Duration
-  const durMatch = lower.match(/(?:duration|keep|make\s+it)\s+(\d+(?:\.\d+)?)\s*(?:sec|seconds|s)/);
-  if (durMatch) {
-    result.duration = parseFloat(durMatch[1]);
-  }
-
-  // Speed
+  // Speed & Ramping
   const speedMatch = lower.match(/(?:speed\s*up|fast\s*forward|speed)\s*(?:by\s*)?(\d+(?:\.\d+)?)\s*x?/);
   if (speedMatch) {
     result.speed = parseFloat(speedMatch[1]);
+  } else if (lower.includes('speed ramp') || lower.includes('velocity')) {
+    result.speedRamp = [
+      { start: 0, end: 1.5, speed: 0.5 },
+      { start: 1.5, end: 3.0, speed: 2.0 },
+    ];
   } else if (lower.includes('slow motion') || lower.includes('slow mo')) {
     result.speed = 0.5;
-  } else if (lower.includes('double speed')) {
-    result.speed = 2.0;
+  }
+
+  // PUBG & Gaming Color Grading
+  if (lower.includes('pubg') || lower.includes('lobby') || lower.includes('emote') || lower.includes('dark fantasy')) {
+    result.colorPreset = 'pubg_dark_fantasy';
+    result.colorGrade = 'contrast=1.3:saturation=1.4,eq=gamma=0.9';
+    result.vignette = true;
+  } else if (lower.includes('cyberpunk')) {
+    result.colorPreset = 'cyberpunk';
+  }
+
+  // Beat Sync Zoom
+  if (lower.includes('zoom') || lower.includes('beat sync') || lower.includes('dance move')) {
+    result.zoomPulse = { time: 1.2, zoomFactor: 1.3, duration: 0.4 };
+  }
+
+  // Flash Cuts & RGB Shake
+  if (lower.includes('flash cut') || lower.includes('flash')) {
+    result.flashCut = { time: 1.2 };
+  }
+  if (lower.includes('shake') || lower.includes('rgb shake')) {
+    result.rgbShake = true;
+  }
+
+  // Aspect ratio
+  if (lower.includes('9:16') || lower.includes('tiktok') || lower.includes('reel') || lower.includes('shorts')) {
+    result.aspectRatio = '9:16';
   }
 
   // Mute / Volume
-  if (lower.includes('mute') || lower.includes('no audio') || lower.includes('silent') || lower.includes('remove audio')) {
+  if (lower.includes('mute') || lower.includes('no audio') || lower.includes('silent')) {
     result.mute = true;
-  } else {
-    const volMatch = lower.match(/(?:volume|sound)\s*(?:to\s*)?(\d+(?:\.\d+)?)\s*x?/);
-    if (volMatch) {
-      result.volume = parseFloat(volMatch[1]);
-    }
-  }
-
-  // Aspect Ratio
-  if (lower.includes('tiktok') || lower.includes('reel') || lower.includes('shorts') || lower.includes('9:16') || lower.includes('vertical')) {
-    result.aspectRatio = '9:16';
-  } else if (lower.includes('square') || lower.includes('1:1') || lower.includes('instagram post')) {
-    result.aspectRatio = '1:1';
-  } else if (lower.includes('widescreen') || lower.includes('16:9') || lower.includes('cinematic aspect')) {
-    result.aspectRatio = '16:9';
-  }
-
-  // Presets & Color Grading
-  if (lower.includes('cyberpunk') || lower.includes('neon')) {
-    result.colorPreset = 'cyberpunk';
-    result.contrast = 1.3;
-    result.saturation = 1.5;
-  } else if (lower.includes('vintage') || lower.includes('retro') || lower.includes('80s')) {
-    result.colorPreset = 'vintage';
-    result.vignette = true;
-  } else if (lower.includes('matrix') || lower.includes('hacker')) {
-    result.colorPreset = 'matrix';
-  } else if (lower.includes('sunset') || lower.includes('warm')) {
-    result.colorPreset = 'warm_sunset';
-  } else if (lower.includes('grayscale') || lower.includes('black and white') || lower.includes('b&w')) {
-    result.grayscale = true;
-  } else if (lower.includes('vivid') || lower.includes('vibrant')) {
-    result.saturation = 1.6;
-    result.contrast = 1.2;
-  }
-
-  // Audio / Video Fades
-  if (lower.includes('fade out') || lower.includes('fade audio')) {
-    result.audioFadeOut = 1.5;
-    result.videoFadeOut = 1.0;
-  }
-
-  // Flips & Rotations
-  if (lower.includes('flip horizontal') || lower.includes('mirror')) {
-    result.flipHorizontal = true;
-  }
-  if (lower.includes('flip vertical')) {
-    result.flipVertical = true;
-  }
-  if (lower.includes('rotate 90')) {
-    result.rotate = 90;
-  } else if (lower.includes('rotate 180')) {
-    result.rotate = 180;
-  } else if (lower.includes('rotate 270')) {
-    result.rotate = 270;
   }
 
   return result;

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Cpu, ChevronDown, ChevronUp, Code2, Scissors, Gauge, VolumeX, Eye, RotateCw, Volume2, Sparkles, Smartphone, Palette, Sun, Film, Music } from 'lucide-react';
+import { Cpu, ChevronDown, ChevronUp, Code2, Scissors, Gauge, VolumeX, Eye, RotateCw, Volume2, Sparkles, Smartphone, Palette, Film, Gamepad2, Zap, Radio } from 'lucide-react';
 import type { VideoEditInstructions } from '../../server/lib/geminiParser';
 
 export type { VideoEditInstructions };
@@ -22,9 +22,9 @@ export const ParsedOpsViewer: React.FC<ParsedOpsViewerProps> = ({
       {/* Header Bar */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Cpu className="w-5 h-5 text-indigo-400" />
+          <Cpu className="w-5 h-5 text-amber-400" />
           <h3 className="font-semibold text-slate-200 text-sm">
-            AI Gemini Flash Parsed Parameters
+            AI Gemini Flash Gaming Parameters
           </h3>
           <span
             className={`text-[10px] px-2 py-0.5 rounded font-bold uppercase ${
@@ -33,7 +33,7 @@ export const ParsedOpsViewer: React.FC<ParsedOpsViewerProps> = ({
                 : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
             }`}
           >
-            {aiSource === 'gemini' ? 'Gemini 2.5 Flash' : 'Rule Fallback Engine'}
+            {aiSource === 'gemini' ? 'Gemini 2.0 Flash' : 'Rule Fallback Engine'}
           </span>
         </div>
 
@@ -42,17 +42,17 @@ export const ParsedOpsViewer: React.FC<ParsedOpsViewerProps> = ({
           className="text-xs text-slate-400 hover:text-slate-200 flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-800/80 border border-slate-700/60 transition-colors"
         >
           <Code2 className="w-3.5 h-3.5" />
-          {isOpen ? 'Hide JSON' : 'View JSON'}
+          {isOpen ? 'Hide JSON Specs' : 'View JSON Specs'}
           {isOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
         </button>
       </div>
 
       {/* Explanation Banner */}
       {instructions.explanation && (
-        <div className="p-3.5 rounded-xl bg-indigo-950/50 border border-indigo-500/30 flex items-start gap-3 text-xs text-indigo-200 shadow-inner">
-          <Sparkles className="w-4 h-4 text-indigo-400 flex-shrink-0 mt-0.5" />
+        <div className="p-3.5 rounded-xl bg-amber-950/40 border border-amber-500/30 flex items-start gap-3 text-xs text-amber-200 shadow-inner">
+          <Sparkles className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
           <div>
-            <span className="font-semibold text-indigo-300">AI Summary: </span>
+            <span className="font-semibold text-amber-300">AI Gaming Summary: </span>
             {instructions.explanation}
           </div>
         </div>
@@ -60,6 +60,41 @@ export const ParsedOpsViewer: React.FC<ParsedOpsViewerProps> = ({
 
       {/* Parameter Badges */}
       <div className="flex flex-wrap gap-2 pt-1">
+        {instructions.colorPreset === 'pubg_dark_fantasy' && (
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-xs text-amber-200 shadow-sm font-semibold">
+            <Gamepad2 className="w-3.5 h-3.5 text-yellow-400" />
+            Style: <span className="font-mono text-yellow-300">PUBG Dark Fantasy</span>
+          </div>
+        )}
+
+        {instructions.zoomPulse && (
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-purple-500/10 border border-purple-500/30 text-xs text-purple-200 shadow-sm font-semibold">
+            <Zap className="w-3.5 h-3.5 text-purple-400" />
+            Beat Sync Zoom: <span className="font-mono text-purple-300">{instructions.zoomPulse.zoomFactor || 1.3}x @ {instructions.zoomPulse.time || 1.2}s</span>
+          </div>
+        )}
+
+        {instructions.speedRamp && instructions.speedRamp.length > 0 && (
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-500/10 border border-cyan-500/30 text-xs text-cyan-200 shadow-sm font-semibold">
+            <Gauge className="w-3.5 h-3.5 text-cyan-400" />
+            Speed Ramp: <span className="font-mono text-cyan-300">Active Velocity</span>
+          </div>
+        )}
+
+        {instructions.flashCut && (
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-500/10 border border-rose-500/30 text-xs text-rose-200 shadow-sm font-semibold">
+            <Radio className="w-3.5 h-3.5 text-rose-400" />
+            Flash Cut: <span className="font-mono text-rose-300">Active</span>
+          </div>
+        )}
+
+        {instructions.rgbShake && (
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-500/10 border border-blue-500/30 text-xs text-blue-200 shadow-sm font-semibold">
+            <Sparkles className="w-3.5 h-3.5 text-blue-400" />
+            RGB Shake: <span className="font-mono text-blue-300">Enabled</span>
+          </div>
+        )}
+
         {instructions.aspectRatio && (
           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800/90 border border-slate-700 text-xs text-slate-200 shadow-sm">
             <Smartphone className="w-3.5 h-3.5 text-pink-400" />
@@ -67,7 +102,7 @@ export const ParsedOpsViewer: React.FC<ParsedOpsViewerProps> = ({
           </div>
         )}
 
-        {instructions.colorPreset && (
+        {instructions.colorPreset && instructions.colorPreset !== 'pubg_dark_fantasy' && (
           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800/90 border border-slate-700 text-xs text-slate-200 shadow-sm">
             <Palette className="w-3.5 h-3.5 text-cyan-400" />
             Preset: <span className="font-mono text-cyan-300 font-bold uppercase">{instructions.colorPreset}</span>
@@ -78,13 +113,6 @@ export const ParsedOpsViewer: React.FC<ParsedOpsViewerProps> = ({
           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800/90 border border-slate-700 text-xs text-slate-200 shadow-sm">
             <Scissors className="w-3.5 h-3.5 text-rose-400" />
             Trim Start: <span className="font-mono text-rose-300 font-bold">{instructions.trimStart}s</span>
-          </div>
-        )}
-
-        {typeof instructions.duration === 'number' && (
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800/90 border border-slate-700 text-xs text-slate-200 shadow-sm">
-            <Scissors className="w-3.5 h-3.5 text-amber-400" />
-            Duration: <span className="font-mono text-amber-300 font-bold">{instructions.duration}s</span>
           </div>
         )}
 
@@ -115,43 +143,15 @@ export const ParsedOpsViewer: React.FC<ParsedOpsViewerProps> = ({
             </div>
           )
         )}
-
-        {typeof instructions.audioFadeOut === 'number' && (
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800/90 border border-slate-700 text-xs text-slate-200 shadow-sm">
-            <Music className="w-3.5 h-3.5 text-indigo-400" />
-            Audio Fade Out: <span className="font-mono text-indigo-300 font-bold">{instructions.audioFadeOut}s</span>
-          </div>
-        )}
-
-        {instructions.grayscale && (
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800/90 border border-slate-700 text-xs text-slate-200 shadow-sm">
-            <Eye className="w-3.5 h-3.5 text-purple-400" />
-            Filter: <span className="font-mono text-purple-300 font-bold">Grayscale</span>
-          </div>
-        )}
-
-        {instructions.flipHorizontal && (
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800/90 border border-slate-700 text-xs text-slate-200 shadow-sm">
-            <RotateCw className="w-3.5 h-3.5 text-blue-400" />
-            Flip: <span className="font-mono text-blue-300 font-bold">Horizontal</span>
-          </div>
-        )}
-
-        {instructions.rotate && (
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800/90 border border-slate-700 text-xs text-slate-200 shadow-sm">
-            <RotateCw className="w-3.5 h-3.5 text-indigo-400" />
-            Rotate: <span className="font-mono text-indigo-300 font-bold">{instructions.rotate}°</span>
-          </div>
-        )}
       </div>
 
       {/* Expandable Raw JSON Output */}
       {isOpen && (
         <div className="space-y-2 pt-2">
           <div className="flex items-center justify-between text-xs text-slate-400">
-            <span>JSON schema output from Gemini Flash &rarr; FFmpeg engine:</span>
+            <span>Structured Gaming JSON output from Gemini Flash &rarr; FFmpeg Engine:</span>
           </div>
-          <pre className="p-4 rounded-xl bg-slate-950 text-slate-300 text-xs overflow-x-auto border border-slate-800 font-mono shadow-inner">
+          <pre className="p-4 rounded-xl bg-slate-950 text-amber-300/90 text-xs overflow-x-auto border border-slate-800 font-mono shadow-inner">
             {JSON.stringify(instructions, null, 2)}
           </pre>
         </div>
