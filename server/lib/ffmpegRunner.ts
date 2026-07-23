@@ -19,7 +19,7 @@ export async function processVideoWithFFmpeg(
   instructions: VideoEditInstructions
 ): Promise<string> {
   return new Promise((resolve, reject) => {
-    console.log(`[FFmpegRunner] Starting video processing...`);
+    console.log(`[FFmpegRunner] Starting Next-Gen video processing...`);
     console.log(`[FFmpegRunner] Input: ${inputPath}`);
     console.log(`[FFmpegRunner] Output: ${outputPath}`);
     console.log(`[FFmpegRunner] Instructions:`, JSON.stringify(instructions, null, 2));
@@ -48,14 +48,24 @@ export async function processVideoWithFFmpeg(
     const videoFilters: string[] = [];
     const audioFilters: string[] = [];
 
-    // Speed adjustment (setpts for video, atempo for audio)
+    // --- Aspect Ratio Cropping ---
+    if (instructions.aspectRatio === '9:16') {
+      // Crop for vertical TikTok / Reels / Shorts
+      videoFilters.push("crop=w='min(iw,ih*9/16)':h='min(ih,iw*16/9)'");
+    } else if (instructions.aspectRatio === '1:1') {
+      // Crop for Instagram Square
+      videoFilters.push("crop='min(iw,ih)':'min(iw,ih)'");
+    } else if (instructions.aspectRatio === '16:9') {
+      // Crop for Widescreen Cinematic
+      videoFilters.push("crop='min(iw,ih*16/9)':'min(ih,iw*9/16)'");
+    }
+
+    // --- Speed Adjustment ---
     const speed = instructions.speed && instructions.speed > 0 ? instructions.speed : 1;
     if (speed !== 1) {
-      // setpts filter formula: setpts = (1/speed) * PTS
       const ptsFactor = (1 / speed).toFixed(4);
       videoFilters.push(`setpts=${ptsFactor}*PTS`);
 
-      // Audio atempo handling (atempo accepts 0.5 to 2.0, chain if outside range)
       if (!instructions.mute) {
         let currentSpeed = speed;
         while (currentSpeed > 2.0) {
@@ -72,20 +82,55 @@ export async function processVideoWithFFmpeg(
       }
     }
 
-    // Grayscale / Saturation
+    // --- Grayscale / Saturation / Contrast / Brightness ---
     if (instructions.grayscale) {
       videoFilters.push('eq=saturation=0');
+    } else {
+      const eqParts: string[] = [];
+      if (typeof instructions.contrast === 'number') {
+        eqParts.push(`contrast=${instructions.contrast}`);
+      }
+      if (typeof instructions.brightness === 'number') {
+        eqParts.push(`brightness=${instructions.brightness}`);
+      }
+      if (typeof instructions.saturation === 'number') {
+        eqParts.push(`saturation=${instructions.saturation}`);
+      }
+      if (eqParts.length > 0) {
+        videoFilters.push(`eq=${eqParts.join(':')}`);
+      }
     }
 
-    // Flips
+    // --- Color Presets & Styling ---
+    if (instructions.colorPreset === 'cyberpunk') {
+      videoFilters.push('colorchannelmixer=rr=1.2:rg=0.1:rb=0.4:gr=0.0:gg=0.8:gb=0.2:br=0.3:bg=0.1:bb=1.3');
+    } else if (instructions.colorPreset === 'vintage') {
+      videoFilters.push('colorchannelmixer=rr=1.1:rg=0.1:rb=0.0:gr=0.1:gg=1.0:gb=0.1:br=0.1:bg=0.1:bb=0.8');
+      videoFilters.push('vignette=PI/4');
+    } else if (instructions.colorPreset === 'warm_sunset') {
+      videoFilters.push('colorchannelmixer=rr=1.3:rg=0.1:rb=0.0:gr=0.1:gg=1.1:gb=0.0:br=0.0:bg=0.1:bb=0.7');
+    } else if (instructions.colorPreset === 'matrix') {
+      videoFilters.push('colorchannelmixer=rr=0.1:rg=0.9:rb=0.1:gr=0.1:gg=1.3:gb=0.1:br=0.1:bg=0.9:bb=0.1');
+    } else if (instructions.colorPreset === 'sepia') {
+      videoFilters.push('colorchannelmixer=.393:.769:.189:0:.349:.686:.168:0:.272:.534:.131');
+    } else if (instructions.colorPreset === 'dramatic') {
+      videoFilters.push('eq=contrast=1.35:brightness=-0.05:saturation=0.85');
+    } else if (instructions.colorPreset === 'vivid') {
+      videoFilters.push('eq=contrast=1.2:saturation=1.7');
+    }
+
+    // --- Vignette ---
+    if (instructions.vignette && instructions.colorPreset !== 'vintage') {
+      videoFilters.push('vignette=PI/4');
+    }
+
+    // --- Flips & Rotations ---
     if (instructions.flipHorizontal) {
       videoFilters.push('hflip');
     }
     if (instructions.flipVertical) {
       videoFilters.push('vflip');
     }
-
-    // Rotation
     if (instructions.rotate === 90) {
       videoFilters.push('transpose=1');
     } else if (instructions.rotate === 180) {
@@ -94,59 +139,70 @@ export async function processVideoWithFFmpeg(
       videoFilters.push('transpose=2');
     }
 
+    // --- Video Fades ---
+    if (typeof instructions.videoFadeIn === 'number' && instructions.videoFadeIn > 0) {
+      videoFilters.push(`fade=t=in:st=0:d=${instructions.videoFadeIn}`);
+    }
+
     // Apply Video Filters
     if (videoFilters.length > 0) {
       command = command.videoFilters(videoFilters);
     }
 
-    // 3. Audio handling (Mute / Volume / Filters)
+    // 3. Audio Filters (Mute / Volume / Fades)
     if (instructions.mute) {
       command = command.noAudio();
     } else {
       if (typeof instructions.volume === 'number' && instructions.volume !== 1.0 && instructions.volume >= 0) {
         audioFilters.push(`volume=${instructions.volume}`);
       }
+      if (typeof instructions.audioFadeIn === 'number' && instructions.audioFadeIn > 0) {
+        audioFilters.push(`afade=t=in:st=0:d=${instructions.audioFadeIn}`);
+      }
+      if (typeof instructions.audioFadeOut === 'number' && instructions.audioFadeOut > 0) {
+        // Approximate audio fade out start if duration is set
+        const fadeStart = instructions.duration ? Math.max(0, instructions.duration - instructions.audioFadeOut) : 5;
+        audioFilters.push(`afade=t=out:st=${fadeStart}:d=${instructions.audioFadeOut}`);
+      }
 
       if (audioFilters.length > 0) {
         command = command.audioFilters(audioFilters);
       }
       
-      // Ensure web standard AAC audio encoding
       command = command.audioCodec('aac').audioBitrate('128k');
     }
 
-    // Ensure web standard H.264 video encoding & MP4 container compatibility
+    // Output options
     command = command
       .videoCodec('libx264')
       .outputOptions([
         '-preset ultrafast',
-        '-crf 23',
+        '-crf 22',
         '-pix_fmt yuv420p',
-        '-movflags +faststart' // allow web playback before full download
+        '-movflags +faststart'
       ])
       .output(outputPath);
 
-    // Event listeners
+    // Event handlers
     command
       .on('start', (commandLine) => {
-        console.log(`[FFmpegRunner] Spawned FFmpeg with command: ${commandLine}`);
+        console.log(`[FFmpegRunner] Executing: ${commandLine}`);
       })
       .on('progress', (progress) => {
         if (progress.percent) {
-          console.log(`[FFmpegRunner] Processing: ${Math.round(progress.percent)}% done`);
+          console.log(`[FFmpegRunner] Progress: ${Math.round(progress.percent)}%`);
         }
       })
       .on('end', () => {
-        console.log(`[FFmpegRunner] FFmpeg processing successfully completed!`);
+        console.log(`[FFmpegRunner] Next-Gen video processing complete!`);
         resolve(outputPath);
       })
       .on('error', (err, stdout, stderr) => {
-        console.error(`[FFmpegRunner] FFmpeg Error: ${err.message}`);
+        console.error(`[FFmpegRunner] FFmpeg error: ${err.message}`);
         console.error(`[FFmpegRunner] FFmpeg stderr: ${stderr}`);
-        reject(new Error(`FFmpeg failed: ${err.message}`));
+        reject(new Error(`FFmpeg processing failed: ${err.message}`));
       });
 
-    // Run the command
     command.run();
   });
 }
