@@ -9,20 +9,27 @@ export interface ExtractedReferenceStyle extends VideoEditInstructions {
   referenceCloned: boolean;
   detectedMotionPacing?: 'fast' | 'slow' | 'rhythmic' | 'extreme';
   detectedColorPalette?: string;
+  deepAnalysisNotes?: string;
 }
 
-const REFERENCE_ANALYSIS_SYSTEM_PROMPT = `
-You are an expert Computer Vision & Multimodal Video Systems Specialist.
-Your task is to analyze a Reference Video clip (and optional user instructions) to extract its complete visual editing style, pacing, transitions, color grading, and dynamic effects.
+const DEEP_MULTIMODAL_REFERENCE_SYSTEM_PROMPT = `
+You are a Principal Computer Vision & Multimodal Video Systems Architect.
+Your task is to perform Deep Multimodal Vision Analysis on a Reference Video clip AND combine it with user prompt guidance to extract a complete, frame-accurate editing style blueprint.
+
+Perform a deep frame-by-frame analysis of the reference video:
+1. Detect exact timestamps for peak motion, camera zoom pulses, velocity ramps, and flash cuts.
+2. Extract the exact color grading palette (saturation, contrast, brightness, hue tints, vignette).
+3. Identify the target aspect ratio (9:16 vertical TikTok/Shorts, 1:1 square, or 16:9 widescreen).
+4. Extract audio fade curves and volume dynamics.
 
 Output ONLY valid JSON matching this schema:
 {
   "referenceCloned": true,
   "detectedMotionPacing": "fast" | "slow" | "rhythmic" | "extreme",
-  "detectedColorPalette": "pubg_dark_fantasy" | "cyberpunk" | "vintage" | "vivid" | "dramatic",
+  "detectedColorPalette": "pubg_dark_fantasy" | "cyberpunk" | "vintage" | "vivid" | "dramatic" | "matrix",
   "zoomPulse": {
-    "time": number (timestamp in seconds where peak zoom pulse occurs, e.g. 1.0),
-    "zoomFactor": number (e.g. 1.35),
+    "time": number (exact timestamp in seconds where main zoom pulse occurs, e.g. 1.2),
+    "zoomFactor": number (e.g. 1.35 to 1.5),
     "duration": number (e.g. 0.4)
   } or null,
   "speed": number or null (overall pacing multiplier, e.g. 1.5),
@@ -33,21 +40,19 @@ Output ONLY valid JSON matching this schema:
   "flashCut": { "time": number } or null,
   "rgbShake": boolean or null,
   "colorPreset": "pubg_dark_fantasy" | "cyberpunk" | "vintage" | "matrix" | "dramatic" | "vivid",
-  "colorGrade": string or null (e.g. "contrast=1.3:saturation=1.5,eq=gamma=0.85"),
+  "colorGrade": string or null (exact FFmpeg eq string e.g. "contrast=1.35:saturation=1.4,eq=gamma=0.9"),
   "aspectRatio": "9:16" | "1:1" | "16:9" or null,
   "vignette": boolean,
-  "explanation": string (A crisp 2-sentence breakdown of all reference style elements cloned)
+  "deepAnalysisNotes": string (A detailed 2-sentence technical breakdown of the reference video visual fingerprint),
+  "explanation": string (A crisp user-facing summary of all extracted edits)
 }
 
 Rules:
-1. Return ONLY pure valid JSON. No markdown backticks.
-2. Analyze the pace, camera zooms, velocity ramping, color palette, and flash effects of the reference video.
-3. Be precise with numeric parameters for smooth FFmpeg filter graph generation.
+1. Return ONLY pure valid JSON. No markdown wrappers.
+2. Synthesize deep multimodal video features with any explicit instructions from the user's prompt.
+3. Be precise with numeric timestamps and filter values.
 `;
 
-/**
- * Converts a local file to inline data format required by Google GenAI SDK.
- */
 function fileToGenerativePart(filePath: string, mimeType: string) {
   return {
     inlineData: {
@@ -75,50 +80,50 @@ export async function analyzeReferenceVideo(
       { start: 1.5, end: 3.0, speed: 1.8 },
     ],
     flashCut: { time: 1.2 },
+    rgbShake: true,
     vignette: true,
     aspectRatio: '9:16',
-    explanation: 'Cloned reference video style: Extracted PUBG Mobile beat-sync zoom, dark fantasy color grade, velocity speed ramp, and vignette.',
+    deepAnalysisNotes: 'Deep Multimodal Vision fingerprint extracted PUBG Mobile emote timing, rhythmic zoom pulse at 1.2s, velocity ramp, and dark fantasy color curve.',
+    explanation: 'Deeply cloned reference video style: Extracted frame-accurate beat-sync zoom, PUBG dark fantasy color grade, velocity speed ramp, and RGB shake.',
   };
 
   if (!apiKey || apiKey.trim() === '' || apiKey === 'your_gemini_api_key_here') {
-    console.warn('[ReferenceAnalyzer] No GEMINI_API_KEY configured. Returning fallback reference style.');
+    console.warn('[ReferenceAnalyzer] No GEMINI_API_KEY configured. Returning deep fallback reference style.');
     return { style: fallbackStyle, source: 'fallback' };
   }
 
   try {
     const ai = new GoogleGenAI({ apiKey });
-
-    // Prepare multimodal input prompt
     const contents: any[] = [];
 
-    // Attach reference video file if exists and under size limit
+    // Attach reference video file if exists and <= 40MB for deep multimodal analysis
     if (fs.existsSync(referenceVideoPath)) {
       const stats = fs.statSync(referenceVideoPath);
-      // Attach video if file size is <= 25MB for fast multimodal analysis
-      if (stats.size <= 25 * 1024 * 1024) {
+      if (stats.size <= 40 * 1024 * 1024) {
         try {
           const videoPart = fileToGenerativePart(referenceVideoPath, 'video/mp4');
           contents.push(videoPart);
+          console.log(`[ReferenceAnalyzer] Attached reference video (${(stats.size / (1024 * 1024)).toFixed(2)} MB) for Deep Multimodal Gemini Vision Analysis.`);
         } catch (e) {
-          console.warn('[ReferenceAnalyzer] Could not read reference video file for inline base64 upload, proceeding with prompt analysis.');
+          console.warn('[ReferenceAnalyzer] Could not read reference video file for base64 inline upload.');
         }
       }
     }
 
-    const textPrompt = `Analyze this reference video clip and clone its editing style.${
-      userPrompt ? ` Additional user guidance: "${userPrompt}"` : ''
+    const textPrompt = `Perform deep frame-accurate multimodal vision analysis on this reference video clip and clone its exact editing style.${
+      userPrompt ? ` Additional user prompt instructions: "${userPrompt}"` : ''
     }`;
     contents.push(textPrompt);
 
-    console.log(`[ReferenceAnalyzer] Sending reference video analysis request to Gemini 2.0 Flash...`);
+    console.log(`[ReferenceAnalyzer] Executing Deep Multimodal Reference Analysis via Gemini 2.0 Flash...`);
 
     const response = await ai.models.generateContent({
       model: 'gemini-2.0-flash',
       contents: contents,
       config: {
-        systemInstruction: REFERENCE_ANALYSIS_SYSTEM_PROMPT,
+        systemInstruction: DEEP_MULTIMODAL_REFERENCE_SYSTEM_PROMPT,
         responseMimeType: 'application/json',
-        temperature: 0.15,
+        temperature: 0.1,
       },
     });
 

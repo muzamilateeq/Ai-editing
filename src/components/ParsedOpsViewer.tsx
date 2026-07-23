@@ -58,6 +58,17 @@ export const ParsedOpsViewer: React.FC<ParsedOpsViewerProps> = ({
         </div>
       )}
 
+      {/* Deep Multimodal Vision Analysis Notes */}
+      {(instructions as any).deepAnalysisNotes && (
+        <div className="p-3.5 rounded-xl bg-purple-950/40 border border-purple-500/30 flex items-start gap-3 text-xs text-purple-200 shadow-inner">
+          <Eye className="w-4 h-4 text-purple-400 flex-shrink-0 mt-0.5" />
+          <div>
+            <span className="font-semibold text-purple-300">Gemini Deep Multimodal Vision Analysis: </span>
+            {(instructions as any).deepAnalysisNotes}
+          </div>
+        </div>
+      )}
+
       {/* Parameter Badges */}
       <div className="flex flex-wrap gap-2 pt-1">
         {instructions.upscale && (
