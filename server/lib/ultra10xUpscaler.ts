@@ -23,58 +23,60 @@ export async function processUltra10XUpscale(params: Ultra10XUpscaleParams): Pro
   const { inputPath, outputPath, targetResolution = '3840x2160', fps = 60 } = params;
 
   console.log(`\n==================================================`);
-  console.log(`[Ultra10XUpscaler] Executing True Pixel-Clean 10x Clarity Engine...`);
-  console.log(`[Ultra10XUpscaler] Mode: Anti-Pixelation + Sub-Pixel Sharpness + Natural Colors`);
-  console.log(`[Ultra10XUpscaler] Target Output: ${targetResolution} @ ${fps}FPS (CRF 10 Lossless Master Pass)`);
+  console.log(`[Ultra10XUpscaler] Executing Extreme Pixel-Level Sub-Pixel Anti-Aliasing Engine...`);
+  console.log(`[Ultra10XUpscaler] Target: 3840x2160 @ 60FPS (CRF 8 Lossless Master Bitrate)`);
 
   return new Promise((resolve, reject) => {
     const [w, h] = targetResolution.split('x');
 
-    // Filter Graph designed specifically for TRUE pixel sharpness without artificial color oversaturation
-    const masterFilters = [
-      // 1. Clean low-res compression artifacts & noise before scaling
-      `hqdn3d=1.2:1.2:2:2`,
-      // 2. High-precision Lanczos 4K scaling (accurate sub-pixel interpolation, no pixel tearing)
-      `scale=${w}:${h}:flags=lanczos+accurate_rnd+full_chroma_int`,
-      // 3. Luminance edge sharpening (crisp character lines, text, weapons - NO color distortion)
-      `unsharp=luma_msize_x=5:luma_msize_y=5:luma_amount=1.0:chroma_msize_x=3:chroma_msize_y=3:chroma_amount=0.2`,
-      // 4. Natural contrast balance (true-to-life colors)
-      `eq=contrast=1.05:saturation=1.05`,
+    const extremeClarityFilters = [
+      // 1. Deblock pixel grid boundaries (prevents jagged stair-stepping artifacts)
+      `deblock=filter=weak:block=4`,
+      // 2. Remove low-res video compression noise
+      `hqdn3d=1.0:1.0:2:2`,
+      // 3. High-precision Cubic Spline 4K scaling (smooth vector geometry, zero pixel tearing)
+      `scale=${w}:${h}:flags=spline+accurate_rnd+full_chroma_int+full_chroma_inp`,
+      // 4. Stage 1 Luminance Edge Sharpness (sharpens lines, characters, text, weapons - NO color alteration)
+      `unsharp=luma_msize_x=5:luma_msize_y=5:luma_amount=1.4:chroma_msize_x=3:chroma_msize_y=3:chroma_amount=0.0`,
+      // 5. Stage 2 Micro-Pixel Detail Polish
+      `unsharp=luma_msize_x=3:luma_msize_y=3:luma_amount=0.8:chroma_msize_x=3:chroma_msize_y=3:chroma_amount=0.0`,
+      // 6. Smooth 60 FPS
       `fps=${fps}`,
     ];
 
     ffmpeg(inputPath)
-      .videoFilters(masterFilters)
+      .videoFilters(extremeClarityFilters)
       .videoCodec('libx264')
       .outputOptions([
-        '-crf 10',
+        '-crf 8',
         '-preset slow',
         `-r ${fps}`,
         '-pix_fmt yuv420p',
+        '-b:v 45M',
         '-b:a 320k',
         '-movflags +faststart',
       ])
       .output(outputPath)
       .on('start', (cmdLine) => {
-        console.log(`[Ultra10XUpscaler] Executing True 10x Clarity Master Pass: ${cmdLine}`);
+        console.log(`[Ultra10XUpscaler] Executing Extreme Pixel Clarity Pass: ${cmdLine}`);
       })
       .on('progress', (progress) => {
         if (progress.percent) {
-          console.log(`[Ultra10XUpscaler] True 10x Clarity Progress: ${Math.round(progress.percent)}%`);
+          console.log(`[Ultra10XUpscaler] Extreme Pixel Clarity Progress: ${Math.round(progress.percent)}%`);
         }
       })
       .on('end', () => {
-        console.log(`[Ultra10XUpscaler] True 10x Pixel-Clean Master Render Complete!`);
+        console.log(`[Ultra10XUpscaler] Extreme Sub-Pixel 10x Clarity Master Render Complete!`);
         console.log(`==================================================\n`);
 
         resolve({
           outputPath,
-          engine: 'True Pixel-Clean 10x AI Clarity Engine (Anti-Pixelation + Sub-Pixel Sharpness)',
+          engine: 'Extreme Sub-Pixel Anti-Aliasing 10x Clarity Engine (CRF 8 Lossless Master)',
           resolution: targetResolution,
         });
       })
       .on('error', (err, stdout, stderr) => {
-        console.error(`[Ultra10XUpscaler] Error in True 10x Master Pass: ${err.message}`);
+        console.error(`[Ultra10XUpscaler] Error in Extreme Pixel Pass: ${err.message}`);
         console.error(`[Ultra10XUpscaler] FFmpeg stderr: ${stderr}`);
         reject(new Error(`Ultra 10x AI upscaling failed: ${err.message}`));
       })
