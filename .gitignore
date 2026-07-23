@@ -1,0 +1,34 @@
+# Dependencies
+node_modules/
+
+# Production build
+dist/
+
+# Uploaded files and generated edited videos
+public/uploads/*
+!public/uploads/.gitkeep
+public/outputs/*
+!public/outputs/.gitkeep
+
+# Environment & API keys
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Editor & OS files
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.DS_Store
+Thumbs.db
