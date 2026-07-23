@@ -1,6 +1,6 @@
 export interface UpscaleOption {
   target: '1080p' | '2K' | '4K';
-  mode?: 'fast_lanczos' | 'ai_esrgan';
+  mode?: 'fast_lanczos' | 'ai_esrgan' | 'pro_master';
   sharpening?: number;
   denoise?: boolean;
 }
@@ -10,11 +10,11 @@ export function buildQualityFilterGraph(
   aspectRatio?: '9:16' | '1:1' | '16:9'
 ): { filters: string[]; outputOptions: string[] } {
   const filters: string[] = [];
-  const target = upscale.target || '1080p';
+  const target = upscale.target || '4K';
 
-  // 1. Calculate resolution dimensions based on aspect ratio
-  let width = 1920;
-  let height = 1080;
+  // 1. Calculate target resolution dimensions
+  let width = 3840;
+  let height = 2160;
 
   if (target === '4K') {
     if (aspectRatio === '9:16') {
@@ -39,7 +39,7 @@ export function buildQualityFilterGraph(
       height = 1440;
     }
   } else {
-    // 1080p Standard
+    // 1080p
     if (aspectRatio === '9:16') {
       width = 1080;
       height = 1920;
@@ -52,22 +52,23 @@ export function buildQualityFilterGraph(
     }
   }
 
-  // 2. High Quality Lanczos Scaling
+  // 2. High Quality Spatial Upscaling (Lanczos)
   filters.push(`scale=${width}:${height}:flags=lanczos`);
 
-  // 3. Denoise Filter (High Quality 3D Denoise)
+  // 3. High Quality 3D Denoise
   if (upscale.denoise !== false) {
     filters.push('hqdn3d=1.5:1.5:3:3');
   }
 
-  // 4. Sharpening Filter (Unsharp Mask)
-  const sharpenStrength = typeof upscale.sharpening === 'number' ? upscale.sharpening : 0.5;
-  if (sharpenStrength > 0) {
-    const lumaAmount = (sharpenStrength * 1.2).toFixed(2);
+  // 4. Adaptive Sharpening & Unsharp Mask (CAS + Unsharp)
+  const sharpenAmount = typeof upscale.sharpening === 'number' ? upscale.sharpening : 0.5;
+  if (sharpenAmount > 0) {
+    const lumaAmount = (sharpenAmount * 1.2).toFixed(2);
+    filters.push(`cas=${sharpenAmount}`);
     filters.push(`unsharp=5:5:${lumaAmount}:5:5:0.4`);
   }
 
-  // 5. Render Encoding Output Flags for Ultra HD Quality
+  // 5. Master Export Encoding Settings
   let outputOptions: string[] = [];
   if (target === '4K') {
     outputOptions = [

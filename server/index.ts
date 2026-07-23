@@ -198,6 +198,93 @@ app.post(
   }
 );
 
+// Pro 4K AI Master Editing API Endpoint
+app.post(
+  '/api/edit-pro-4k',
+  upload.fields([
+    { name: 'user_video', maxCount: 1 },
+    { name: 'reference_video', maxCount: 1 },
+    { name: 'video', maxCount: 1 },
+  ]),
+  async (req: express.Request, res: express.Response): Promise<void> => {
+    try {
+      const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+      const userFile = files?.['user_video']?.[0] || files?.['video']?.[0];
+      const referenceFile = files?.['reference_video']?.[0];
+      const prompt = req.body?.prompt || '';
+      const targetRes = (req.body?.resolution as '1080p' | '2K' | '4K') || '4K';
+
+      if (!userFile) {
+        res.status(400).json({ success: false, error: 'Target video file is required.' });
+        return;
+      }
+
+      console.log(`\n==================================================`);
+      console.log(`[API /api/edit-pro-4k] Starting Pro 4K AI Video Render...`);
+      console.log(`[API /api/edit-pro-4k] Resolution: ${targetRes}`);
+      console.log(`[API /api/edit-pro-4k] User Video: ${userFile.filename}`);
+
+      let instructions: any;
+      let aiSource: 'gemini' | 'fallback' = 'gemini';
+      let rawAiResponse: string | undefined;
+
+      if (referenceFile) {
+        console.log(`[API /api/edit-pro-4k] Reference Style Video: ${referenceFile.filename}`);
+        const refAnalysis = await analyzeReferenceVideo(referenceFile.path, prompt);
+        instructions = refAnalysis.style;
+        aiSource = refAnalysis.source;
+        rawAiResponse = refAnalysis.rawResponse;
+      } else {
+        const parseResult = await parseVideoEditPrompt(prompt);
+        instructions = parseResult.instructions;
+        aiSource = parseResult.source;
+        rawAiResponse = parseResult.rawResponse;
+      }
+
+      // Enforce Pro 4K Upscale Option
+      instructions.upscale = {
+        target: targetRes,
+        mode: 'pro_master',
+        sharpening: 0.5,
+        denoise: true,
+      };
+
+      const outputFilename = `pro-4k-${Date.now()}-${Math.random().toString(36).substring(2, 7)}.mp4`;
+      const outputPath = path.join(OUTPUTS_DIR, outputFilename);
+
+      if (referenceFile) {
+        await processStyleTransferWithFFmpeg(userFile.path, outputPath, instructions);
+      } else {
+        await processVideoWithFFmpeg(userFile.path, outputPath, instructions);
+      }
+
+      const relativeResultUrl = `/outputs/${outputFilename}`;
+      const relativeOriginalUrl = `/uploads/${userFile.filename}`;
+      const relativeReferenceUrl = referenceFile ? `/uploads/${referenceFile.filename}` : null;
+
+      console.log(`[API /api/edit-pro-4k] Pro 4K Render Success! Output: ${relativeResultUrl}`);
+      console.log(`==================================================\n`);
+
+      res.json({
+        success: true,
+        resultUrl: relativeResultUrl,
+        originalUrl: relativeOriginalUrl,
+        referenceUrl: relativeReferenceUrl,
+        instructions: instructions,
+        aiSource: aiSource,
+        prompt: prompt,
+        rawAiResponse: rawAiResponse,
+      });
+    } catch (error: any) {
+      console.error('[API /api/edit-pro-4k] Error during Pro 4K render:', error);
+      res.status(500).json({
+        success: false,
+        error: error.message || 'An unexpected error occurred during 4K render.',
+      });
+    }
+  }
+);
+
 // Global JSON error handler middleware to prevent HTML error responses
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error('[Express Error Handler]:', err.message || err);

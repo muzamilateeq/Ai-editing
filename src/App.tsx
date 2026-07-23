@@ -87,8 +87,9 @@ export default function App() {
       formData.append('reference_video', referenceFile);
     }
     formData.append('prompt', finalPrompt);
+    formData.append('resolution', selectedResolution);
 
-    const endpoint = referenceFile ? `${API_BASE_URL}/api/edit-with-reference` : `${API_BASE_URL}/api/edit`;
+    const endpoint = `${API_BASE_URL}/api/edit-pro-4k`;
 
     try {
       const response = await fetch(endpoint, {
