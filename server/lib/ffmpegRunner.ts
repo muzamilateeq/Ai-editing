@@ -143,9 +143,9 @@ export async function processVideoWithFFmpeg(
       videoFilters.push('transpose=2');
     }
 
-    // --- Smooth 60FPS & High Graphics Color ---
+    // --- High-Precision Optical Flow Motion Interpolation (minterpolate) & High-Graphics Color ---
     if (instructions.fps60) {
-      videoFilters.push('fps=60');
+      videoFilters.push('minterpolate=fps=60:mi_mode=mci:mc_mode=aobmc:me_mode=bidir:me=esa:vsbmc=1:scd=fdiff');
     }
     if (instructions.highGraphicsColor) {
       videoFilters.push('eq=contrast=1.3:brightness=0.02:saturation=1.5,colorchannelmixer=rr=1.1:gg=1.1:bb=1.1');
