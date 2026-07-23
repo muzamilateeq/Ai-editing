@@ -24,23 +24,21 @@ export async function processUltra10XUpscale(params: Ultra10XUpscaleParams): Pro
 
   console.log(`\n==================================================`);
   console.log(`[Ultra10XUpscaler] Executing Extreme Pixel-Level Sub-Pixel Anti-Aliasing Engine...`);
-  console.log(`[Ultra10XUpscaler] Target: 3840x2160 @ 60FPS (CRF 8 Lossless Master Bitrate)`);
+  console.log(`[Ultra10XUpscaler] Target: 3840x2160 @ 60FPS (CRF 10 Lossless Quality)`);
 
   return new Promise((resolve, reject) => {
     const [w, h] = targetResolution.split('x');
 
     const extremeClarityFilters = [
-      // 1. Deblock pixel grid boundaries (prevents jagged stair-stepping artifacts)
-      `deblock=filter=weak:block=4`,
-      // 2. Remove low-res video compression noise
+      // 1. Remove low-res video compression noise
       `hqdn3d=1.0:1.0:2:2`,
-      // 3. High-precision Cubic Spline 4K scaling (smooth vector geometry, zero pixel tearing)
-      `scale=${w}:${h}:flags=spline+accurate_rnd+full_chroma_int+full_chroma_inp`,
-      // 4. Stage 1 Luminance Edge Sharpness (sharpens lines, characters, text, weapons - NO color alteration)
-      `unsharp=luma_msize_x=5:luma_msize_y=5:luma_amount=1.4:chroma_msize_x=3:chroma_msize_y=3:chroma_amount=0.0`,
-      // 5. Stage 2 Micro-Pixel Detail Polish
-      `unsharp=luma_msize_x=3:luma_msize_y=3:luma_amount=0.8:chroma_msize_x=3:chroma_msize_y=3:chroma_amount=0.0`,
-      // 6. Smooth 60 FPS
+      // 2. High-precision Cubic Spline 4K scaling (smooth vector geometry, zero pixel tearing)
+      `scale=${w}:${h}:flags=spline+accurate_rnd+full_chroma_int`,
+      // 3. Stage 1 Luminance Edge Sharpness (sharpens lines, characters, text, weapons - NO color alteration)
+      `unsharp=5:5:1.4:3:3:0.0`,
+      // 4. Stage 2 Micro-Pixel Detail Polish
+      `unsharp=3:3:0.8:3:3:0.0`,
+      // 5. Smooth 60 FPS
       `fps=${fps}`,
     ];
 
@@ -48,11 +46,10 @@ export async function processUltra10XUpscale(params: Ultra10XUpscaleParams): Pro
       .videoFilters(extremeClarityFilters)
       .videoCodec('libx264')
       .outputOptions([
-        '-crf 8',
-        '-preset slow',
+        '-crf 10',
+        '-preset medium',
         `-r ${fps}`,
         '-pix_fmt yuv420p',
-        '-b:v 45M',
         '-b:a 320k',
         '-movflags +faststart',
       ])
@@ -71,7 +68,7 @@ export async function processUltra10XUpscale(params: Ultra10XUpscaleParams): Pro
 
         resolve({
           outputPath,
-          engine: 'Extreme Sub-Pixel Anti-Aliasing 10x Clarity Engine (CRF 8 Lossless Master)',
+          engine: 'Extreme Sub-Pixel Anti-Aliasing 10x Clarity Engine',
           resolution: targetResolution,
         });
       })
