@@ -4,9 +4,16 @@ import ffprobeInstaller from '@ffprobe-installer/ffprobe';
 import { GoogleGenAI } from '@google/genai';
 import Replicate from 'replicate';
 import fs from 'fs';
+import path from 'path';
+import { spawn } from 'child_process';
 import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
 
 dotenv.config();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const rootDir = path.resolve(__dirname, '..', '..');
 
 ffmpeg.setFfmpegPath(ffmpegInstaller.path);
 ffmpeg.setFfprobePath(ffprobeInstaller.path);
@@ -14,8 +21,9 @@ ffmpeg.setFfprobePath(ffprobeInstaller.path);
 export interface MultiAiEnhanceParams {
   inputPath: string;
   outputPath: string;
-  targetResolution?: '3840x2160' | '2560x1440';
+  targetResolution?: '3840x2160' | '7680x4320' | '2560x1440';
   fps?: number;
+  modelType?: 'neural_ai' | 'gemini_vision' | 'master_8k';
 }
 
 export interface EngineExecutionStatus {
@@ -43,60 +51,89 @@ export async function processMultiAiEnhance(params: MultiAiEnhanceParams): Promi
   const fallbackHistory: EngineExecutionStatus[] = [];
 
   console.log(`\n==================================================`);
-  console.log(`[MultiAiEnhancer] Initializing Multi-Provider 4K Video Quality Enhancement Pipeline...`);
-  console.log(`[MultiAiEnhancer] Target Output: ${targetResolution} @ ${fps}FPS`);
+  console.log(`[MultiAiEnhancer] Initializing Multi-Provider AI Super-Resolution Pipeline...`);
+  console.log(`[MultiAiEnhancer] Target Output Resolution: ${targetResolution} @ ${fps}FPS`);
+
+  const scale = targetResolution === '7680x4320' ? 8 : 4;
 
   // =========================================================================
-  // ENGINE A: Replicate Real-ESRGAN Generative Neural AI Model
+  // ENGINE A: Python Neural Super-Resolution AI Engine (OpenCV / PyTorch DNN / FSRCNN / LapSRN)
+  // =========================================================================
+  const pythonScript = path.join(rootDir, 'server', 'python', 'ai_superres_video.py');
+  if (fs.existsSync(pythonScript)) {
+    try {
+      console.log(`[MultiAiEnhancer] [Engine A] Running Python Neural AI Super-Resolution Engine (Scale: ${scale}x)...`);
+      const pyResult = await runPythonAiUpscaler(pythonScript, inputPath, outputPath, scale);
+      
+      fallbackHistory.push({ engine: `Engine A: Python Neural AI Super-Resolution (${scale}x)`, status: 'success' });
+      console.log(`[MultiAiEnhancer] Engine A Success! Output ready at: ${pyResult}`);
+
+      return {
+        outputPath: pyResult,
+        engineUsed: `Engine A: Python Neural AI Super-Resolution Engine (${targetResolution === '7680x4320' ? '8K Ultra HD' : '4K Ultra HD'})`,
+        fallbackHistory,
+        resolution: targetResolution,
+        aiReport: `Python Neural AI Model: Reconstructed sub-pixel textures, edge geometry & high-frequency detail at ${targetResolution}.`,
+      };
+    } catch (errPy: any) {
+      console.warn(`[MultiAiEnhancer] [Engine A Failed]: ${errPy.message}. Proceeding to Replicate / Gemini fallback...`);
+      fallbackHistory.push({ engine: 'Engine A: Python Neural AI Engine', status: 'failed', error: errPy.message });
+    }
+  } else {
+    fallbackHistory.push({ engine: 'Engine A: Python Neural AI Engine', status: 'skipped', error: 'Python script not found' });
+  }
+
+  // =========================================================================
+  // ENGINE B: Replicate Real-ESRGAN Generative Neural AI Model (Cloud Fallback)
   // =========================================================================
   if (replicate) {
     try {
-      console.log(`[MultiAiEnhancer] [Engine A] Attempting Replicate Real-ESRGAN Neural AI Super-Resolution...`);
+      console.log(`[MultiAiEnhancer] [Engine B] Attempting Replicate Real-ESRGAN Neural AI Super-Resolution...`);
       const fileData = fs.readFileSync(inputPath);
       const dataUri = `data:video/mp4;base64,${fileData.toString('base64')}`;
 
       const output: any = await replicate.run('lucataco/real-esrgan-video:e0b3de90c29f6479b1897c9c0f99478f773a4b95f190623a677e4871e44efb60', {
         input: {
           video: dataUri,
-          scale: 4,
+          scale: scale,
         },
       });
 
       if (output && typeof output === 'string') {
-        fallbackHistory.push({ engine: 'Engine A: Replicate Real-ESRGAN (Neural AI)', status: 'success' });
-        console.log(`[MultiAiEnhancer] Engine A Success! Output URL: ${output}`);
+        fallbackHistory.push({ engine: 'Engine B: Replicate Real-ESRGAN (Neural AI)', status: 'success' });
+        console.log(`[MultiAiEnhancer] Engine B Success! Output URL: ${output}`);
 
         return {
           outputPath: output,
-          engineUsed: 'Engine A: Replicate Real-ESRGAN (Generative Neural AI)',
+          engineUsed: 'Engine B: Replicate Real-ESRGAN (Generative Neural AI)',
           fallbackHistory,
           resolution: targetResolution,
-          aiReport: 'Real-ESRGAN Generative Neural Model: Reconstructed sub-pixel textures, skin details, and sharp vector geometry.',
+          aiReport: 'Real-ESRGAN Generative Neural Model: Reconstructed sub-pixel textures, facial features, and sharp vector details.',
         };
       } else {
         throw new Error('Replicate returned empty output URL');
       }
-    } catch (errA: any) {
-      console.warn(`[MultiAiEnhancer] [Engine A Failed]: ${errA.message}. Proceeding to Engine B fallback...`);
-      fallbackHistory.push({ engine: 'Engine A: Replicate Real-ESRGAN (Neural AI)', status: 'failed', error: errA.message });
+    } catch (errB: any) {
+      console.warn(`[MultiAiEnhancer] [Engine B Failed]: ${errB.message}. Proceeding to Gemini Flash Vision AI...`);
+      fallbackHistory.push({ engine: 'Engine B: Replicate Real-ESRGAN (Neural AI)', status: 'failed', error: errB.message });
     }
   } else {
-    fallbackHistory.push({ engine: 'Engine A: Replicate Real-ESRGAN (Neural AI)', status: 'skipped', error: 'No REPLICATE_API_TOKEN configured' });
+    fallbackHistory.push({ engine: 'Engine B: Replicate Real-ESRGAN (Neural AI)', status: 'skipped', error: 'No REPLICATE_API_TOKEN configured' });
   }
 
   // =========================================================================
-  // ENGINE B: Gemini 2.0 Flash Multimodal Vision AI + Sub-Pixel Spline 4K
+  // ENGINE C: Gemini 2.0 Flash Multimodal Vision AI + Sub-Pixel Spline Engine
   // =========================================================================
   if (ai && fs.existsSync(inputPath)) {
     try {
-      console.log(`[MultiAiEnhancer] [Engine B] Attempting Gemini 2.0 Flash Multimodal Vision AI + Spline 4K...`);
+      console.log(`[MultiAiEnhancer] [Engine C] Attempting Gemini 2.0 Flash Multimodal Vision AI + Spline Engine...`);
       const fileBuffer = fs.readFileSync(inputPath);
       const sampleBuffer = fileBuffer.length > 8 * 1024 * 1024 ? fileBuffer.subarray(0, 8 * 1024 * 1024) : fileBuffer;
       const base64Data = sampleBuffer.toString('base64');
 
-      let lumaSharpen = '11:11:3.0:5:5:1.0';
-      let contrastBoost = 'contrast=1.35:brightness=0.02:saturation=1.3:gamma=0.9';
-      let geminiReport = 'Gemini 2.0 Flash Vision AI analyzed video frame and tuned adaptive 11x11 Luma Matrix & sub-pixel Spline 4K scaling.';
+      let lumaSharpen = '13:13:2.5:7:7:0.8';
+      let contrastBoost = 'contrast=1.35:brightness=0.01:saturation=1.3:gamma=0.9';
+      let geminiReport = 'Gemini 2.0 Flash Vision AI analyzed video frame and dynamically tuned 13x13 Luma Sharpening & contrast parameters.';
 
       const response = await ai.models.generateContent({
         model: 'gemini-2.0-flash',
@@ -111,15 +148,15 @@ export async function processMultiAiEnhance(params: MultiAiEnhanceParams): Promi
                 },
               },
               {
-                text: `Analyze this low-res video frame for AI 4K Super-Resolution & Quality Enhancement.
+                text: `Analyze this low-res video frame for AI ${targetResolution === '7680x4320' ? '8K' : '4K'} Super-Resolution & Quality Enhancement.
 Identify:
-1. Video content type (e.g. PUBG gaming clip, real human face, animation, dance).
-2. Compression noise level & edge blur.
+1. Video content type (e.g. gaming, human face, animation, dance).
+2. Noise level & edge compression.
 
 Output ONLY valid JSON:
 {
-  "recommendedMatrix": "11:11:3.0:5:5:1.0",
-  "recommendedContrast": "contrast=1.35:brightness=0.02:saturation=1.3:gamma=0.9",
+  "recommendedMatrix": "13:13:2.5:7:7:0.8",
+  "recommendedContrast": "contrast=1.35:brightness=0.01:saturation=1.3:gamma=0.9",
   "aiReport": "Detailed Gemini AI report on sub-pixel sharpness & contrast parameters."
 }`,
               },
@@ -137,52 +174,82 @@ Output ONLY valid JSON:
         if (parsed.aiReport) geminiReport = `Gemini 2.0 Flash Vision AI: ${parsed.aiReport}`;
       }
 
-      const resB = await runFFmpegEnhance(inputPath, outputPath, targetResolution, fps, lumaSharpen, contrastBoost);
-      fallbackHistory.push({ engine: 'Engine B: Gemini 2.0 Flash Vision AI + Spline 4K', status: 'success' });
-      console.log(`[MultiAiEnhancer] Engine B Success! Saved to: ${resB}`);
+      const resC = await runFFmpegEnhance(inputPath, outputPath, targetResolution, fps, lumaSharpen, contrastBoost);
+      fallbackHistory.push({ engine: 'Engine C: Gemini 2.0 Flash Vision AI + Spline Master', status: 'success' });
+      console.log(`[MultiAiEnhancer] Engine C Success! Saved to: ${resC}`);
 
       return {
-        outputPath: resB,
-        engineUsed: 'Engine B: Gemini 2.0 Flash Multimodal Vision AI + Spline 4K Engine',
+        outputPath: resC,
+        engineUsed: `Engine C: Gemini 2.0 Flash Multimodal Vision AI + Spline ${targetResolution === '7680x4320' ? '8K' : '4K'} Engine`,
         fallbackHistory,
         resolution: targetResolution,
         aiReport: geminiReport,
       };
-    } catch (errB: any) {
-      console.warn(`[MultiAiEnhancer] [Engine B Failed]: ${errB.message}. Proceeding to Engine C local fallback...`);
-      fallbackHistory.push({ engine: 'Engine B: Gemini 2.0 Flash Vision AI', status: 'failed', error: errB.message });
+    } catch (errC: any) {
+      console.warn(`[MultiAiEnhancer] [Engine C Failed]: ${errC.message}. Proceeding to local fallback...`);
+      fallbackHistory.push({ engine: 'Engine C: Gemini 2.0 Flash Vision AI', status: 'failed', error: errC.message });
     }
   } else {
-    fallbackHistory.push({ engine: 'Engine B: Gemini 2.0 Flash Vision AI', status: 'skipped', error: 'Gemini API Key missing or file unreadable' });
+    fallbackHistory.push({ engine: 'Engine C: Gemini 2.0 Flash Vision AI', status: 'skipped', error: 'Gemini API Key missing or file unreadable' });
   }
 
   // =========================================================================
-  // ENGINE C: High-Precision Local Master FFmpeg Lanczos 4K Engine (100% Reliable Fallback)
+  // ENGINE D: High-Precision Local Master FFmpeg Engine (100% Guaranteed Fallback)
   // =========================================================================
-  console.log(`[MultiAiEnhancer] [Engine C] Executing Local High-Precision Lanczos 4K Master Fallback Engine...`);
+  console.log(`[MultiAiEnhancer] [Engine D] Executing Local High-Precision Master Fallback Engine...`);
   try {
-    const defaultMatrix = '11:11:3.0:5:5:1.0';
-    const defaultContrast = 'contrast=1.35:brightness=0.02:saturation=1.3:gamma=0.9';
-    const resC = await runFFmpegEnhance(inputPath, outputPath, targetResolution, fps, defaultMatrix, defaultContrast);
+    const defaultMatrix = '13:13:2.5:7:7:0.8';
+    const defaultContrast = 'contrast=1.3:brightness=0.01:saturation=1.2:gamma=0.9';
+    const resD = await runFFmpegEnhance(inputPath, outputPath, targetResolution, fps, defaultMatrix, defaultContrast);
 
-    fallbackHistory.push({ engine: 'Engine C: High-Precision Local Lanczos 4K Master Engine', status: 'success' });
-    console.log(`[MultiAiEnhancer] Engine C Success! Output ready at ${resC}`);
+    fallbackHistory.push({ engine: 'Engine D: High-Precision Local Master Engine', status: 'success' });
+    console.log(`[MultiAiEnhancer] Engine D Success! Output ready at ${resD}`);
 
     return {
-      outputPath: resC,
-      engineUsed: 'Engine C: High-Precision Local Lanczos 4K Master Engine (100% Reliable Fallback)',
+      outputPath: resD,
+      engineUsed: `Engine D: High-Precision Local Master Engine (${targetResolution === '7680x4320' ? '8K Ultra HD' : '4K Ultra HD'})`,
       fallbackHistory,
       resolution: targetResolution,
-      aiReport: 'Engine C Fallback: Applied 3840x2160 Lanczos spatial scaling, 11x11 unsharp matrix, 3D denoise, and 60FPS high-bitrate encoding.',
+      aiReport: `Engine D Fallback: Applied ${targetResolution} Spline spatial scaling, 13x13 unsharp matrix, 3D denoise, and 60FPS high-bitrate encoding.`,
     };
-  } catch (errC: any) {
-    console.error(`[MultiAiEnhancer] Engine C Error: ${errC.message}`);
-    fallbackHistory.push({ engine: 'Engine C: High-Precision Local Lanczos 4K Master Engine', status: 'failed', error: errC.message });
-    throw new Error(`All Multi-AI 4K Enhancement Engines failed: ${errC.message}`);
+  } catch (errD: any) {
+    console.error(`[MultiAiEnhancer] Engine D Error: ${errD.message}`);
+    fallbackHistory.push({ engine: 'Engine D: High-Precision Local Master Engine', status: 'failed', error: errD.message });
+    throw new Error(`All Multi-AI Enhancement Engines failed: ${errD.message}`);
   }
 }
 
-// Helper function to execute FFmpeg 4K Master render
+// Spawn Python Neural AI process wrapper
+function runPythonAiUpscaler(scriptPath: string, inputPath: string, outputPath: string, scale: number): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const py = spawn('python', [scriptPath, '--input', inputPath, '--output', outputPath, '--scale', scale.toString()]);
+
+    let stderrData = '';
+    let success = false;
+
+    py.stdout.on('data', (data) => {
+      const str = data.toString();
+      console.log(`[Python AI] ${str.trim()}`);
+      if (str.includes('"status": "success"') || str.includes('status\': \'success')) {
+        success = true;
+      }
+    });
+
+    py.stderr.on('data', (data) => {
+      stderrData += data.toString();
+    });
+
+    py.on('close', (code) => {
+      if (code === 0 && fs.existsSync(outputPath) && fs.readFileSync(outputPath).length > 1000) {
+        resolve(outputPath);
+      } else {
+        reject(new Error(`Python AI process exited with code ${code}: ${stderrData.substring(0, 200)}`));
+      }
+    });
+  });
+}
+
+// Helper function to execute FFmpeg render
 function runFFmpegEnhance(
   inputPath: string,
   outputPath: string,

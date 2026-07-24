@@ -424,7 +424,7 @@ app.post(
 
 /**
  * POST /api/enhance-video-4k
- * Dedicated Multi-AI Engine 4K Video Quality Enhancement Route
+ * Dedicated Multi-AI Engine 4K / 8K Video Quality Enhancement Route
  */
 app.post(
   '/api/enhance-video-4k',
@@ -435,10 +435,11 @@ app.post(
   async (req, res) => {
     try {
       console.log(`\n==================================================`);
-      console.log(`[API /api/enhance-video-4k] Processing Multi-AI 4K Quality Enhancement Request...`);
+      console.log(`[API /api/enhance-video-4k] Processing Multi-AI Video Quality Enhancement Request...`);
 
       const files = req.files as { [fieldname: string]: Express.Multer.File[] };
       const videoFile = files?.['user_video']?.[0] || files?.['video']?.[0];
+      const targetRes = (req.body?.resolution as '3840x2160' | '7680x4320') || '3840x2160';
 
       if (!videoFile) {
         res.status(400).json({
@@ -449,14 +450,15 @@ app.post(
       }
 
       console.log(`[API /api/enhance-video-4k] Input Video File: ${videoFile.filename}`);
+      console.log(`[API /api/enhance-video-4k] Target Resolution: ${targetRes}`);
 
-      const outputFilename = `multi-ai-4k-${Date.now()}-${Math.random().toString(36).substring(2, 7)}.mp4`;
+      const outputFilename = `multi-ai-enhanced-${Date.now()}-${Math.random().toString(36).substring(2, 7)}.mp4`;
       const outputPath = path.join(OUTPUTS_DIR, outputFilename);
 
       const enhanceResult = await processMultiAiEnhance({
         inputPath: videoFile.path,
         outputPath: outputPath,
-        targetResolution: '3840x2160',
+        targetResolution: targetRes,
         fps: 60,
       });
 
@@ -481,7 +483,7 @@ app.post(
       console.error('[API /api/enhance-video-4k] Error:', error);
       res.status(500).json({
         success: false,
-        error: error.message || 'An unexpected error occurred during Multi-AI 4K video enhancement.',
+        error: error.message || 'An unexpected error occurred during Multi-AI video enhancement.',
       });
     }
   }

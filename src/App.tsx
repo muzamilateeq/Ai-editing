@@ -18,7 +18,12 @@ interface EditResult {
 const getApiBaseUrl = () => {
   if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
   if (typeof window !== 'undefined') {
-    return `${window.location.protocol}//${window.location.hostname}:3001`;
+    const host = window.location.hostname;
+    if (host === 'localhost' || host === '127.0.0.1' || host.startsWith('192.168.') || host.startsWith('10.')) {
+      return `${window.location.protocol}//${host}:3001`;
+    }
+    // On Vercel or cloud deployments, use relative origin (no hardcoded :3001 port!)
+    return '';
   }
   return 'http://localhost:3001';
 };
