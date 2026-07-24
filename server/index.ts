@@ -11,6 +11,7 @@ import { analyzeReferenceVideo } from './lib/referenceAnalyzer.js';
 import { processStyleTransferWithFFmpeg } from './lib/ffmpegStyleTransfer.js';
 import { processHuggingFace4KUpscale } from './lib/huggingFace4k.js';
 import { processUltra10XUpscale } from './lib/ultra10xUpscaler.js';
+import { processMultiAiEnhance } from './lib/multiAiEnhancer.js';
 
 dotenv.config();
 
@@ -416,6 +417,71 @@ app.post(
       res.status(500).json({
         success: false,
         error: error.message || 'An unexpected error occurred during 10x AI upscale.',
+      });
+    }
+  }
+);
+
+/**
+ * POST /api/enhance-video-4k
+ * Dedicated Multi-AI Engine 4K Video Quality Enhancement Route
+ */
+app.post(
+  '/api/enhance-video-4k',
+  upload.fields([
+    { name: 'user_video', maxCount: 1 },
+    { name: 'video', maxCount: 1 },
+  ]),
+  async (req, res) => {
+    try {
+      console.log(`\n==================================================`);
+      console.log(`[API /api/enhance-video-4k] Processing Multi-AI 4K Quality Enhancement Request...`);
+
+      const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+      const videoFile = files?.['user_video']?.[0] || files?.['video']?.[0];
+
+      if (!videoFile) {
+        res.status(400).json({
+          success: false,
+          error: 'No input video file provided. Upload a video under field name "user_video" or "video".',
+        });
+        return;
+      }
+
+      console.log(`[API /api/enhance-video-4k] Input Video File: ${videoFile.filename}`);
+
+      const outputFilename = `multi-ai-4k-${Date.now()}-${Math.random().toString(36).substring(2, 7)}.mp4`;
+      const outputPath = path.join(OUTPUTS_DIR, outputFilename);
+
+      const enhanceResult = await processMultiAiEnhance({
+        inputPath: videoFile.path,
+        outputPath: outputPath,
+        targetResolution: '3840x2160',
+        fps: 60,
+      });
+
+      const relativeResultUrl = enhanceResult.outputPath.startsWith('http')
+        ? enhanceResult.outputPath
+        : `/outputs/${outputFilename}`;
+      const relativeOriginalUrl = `/uploads/${videoFile.filename}`;
+
+      console.log(`[API /api/enhance-video-4k] Success! Processed via: ${enhanceResult.engineUsed}`);
+      console.log(`==================================================\n`);
+
+      res.json({
+        success: true,
+        resultUrl: relativeResultUrl,
+        originalUrl: relativeOriginalUrl,
+        engineUsed: enhanceResult.engineUsed,
+        fallbackHistory: enhanceResult.fallbackHistory,
+        resolution: enhanceResult.resolution,
+        aiReport: enhanceResult.aiReport,
+      });
+    } catch (error: any) {
+      console.error('[API /api/enhance-video-4k] Error:', error);
+      res.status(500).json({
+        success: false,
+        error: error.message || 'An unexpected error occurred during Multi-AI 4K video enhancement.',
       });
     }
   }
