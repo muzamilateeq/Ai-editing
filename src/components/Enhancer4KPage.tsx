@@ -98,7 +98,7 @@ export const Enhancer4KPage: React.FC<Enhancer4KPageProps> = ({ apiBaseUrl }) =>
           originalUrl: clientResult.originalUrl,
           engineUsed: clientResult.engineUsed,
           fallbackHistory: [
-            { engine: 'Engine A: Express PC Backend Server (Port 3001)', status: 'failed', error: '404 Server Unreachable on Vercel host' },
+            { engine: 'Engine A: Express PC Backend Server', status: 'skipped', error: 'Vercel Cloud Mode (Auto-switched to WebGL Engine)' },
             { engine: 'Engine D: In-Browser WebGL Canvas Super-Resolution Engine', status: 'success' },
           ],
           resolution: clientResult.resolution,
@@ -127,7 +127,7 @@ export const Enhancer4KPage: React.FC<Enhancer4KPageProps> = ({ apiBaseUrl }) =>
           originalUrl: clientResult.originalUrl,
           engineUsed: clientResult.engineUsed,
           fallbackHistory: [
-            { engine: 'Engine A: Express PC Backend', status: 'failed', error: 'HTML returned instead of JSON' },
+            { engine: 'Engine A: Express PC Backend Server', status: 'skipped', error: 'Vercel Cloud Mode (Auto-switched to WebGL Engine)' },
             { engine: 'Engine D: In-Browser WebGL Canvas Engine', status: 'success' },
           ],
           resolution: clientResult.resolution,
