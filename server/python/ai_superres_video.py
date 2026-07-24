@@ -21,20 +21,22 @@ def process_video_ai(input_path, output_path, scale=4, model_name="fsrcnn"):
     target_w = 3840 if scale <= 4 else 7680
     target_h = 2160 if scale <= 4 else 4320
 
+    mid_w = int(target_w * 0.65)
+    mid_h = int(target_h * 0.65)
+
     print(f"JSON:{json.dumps({'status': 'processing_frames', 'target': f'{target_w}x{target_h}'})}", flush=True)
 
     temp_audio = os.path.join(models_dir, f"audio_{int(time.time())}.aac")
     subprocess.run([ffmpeg_exe, "-y", "-i", input_path, "-vn", "-acodec", "copy", temp_audio], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-    # Pristine Natural Quality Lanczos 4K/8K Filter Chain
-    scale_filter = f"scale={target_w}:{target_h}:flags=lanczos+accurate_rnd+full_chroma_int+full_chroma_inp"
-    
+    # Industry Standard Dual-Stage Step-Up Lanczos 4K/8K Filter Stack
     filters = [
-        "deblock=filter=weak:block=4",
         "hqdn3d=1.0:1.0:2:2",
-        scale_filter,
-        "unsharp=5:5:0.8:3:3:0.2", # Gentle detail sharpening (No noise distortion!)
-        "eq=contrast=1.05:brightness=0.0:saturation=1.02:gamma=0.98", # Natural color balance
+        f"scale={mid_w}:{mid_h}:flags=lanczos",
+        "unsharp=5:5:0.6:3:3:0.2",
+        f"scale={target_w}:{target_h}:flags=lanczos+accurate_rnd+full_chroma_int+full_chroma_inp",
+        "unsharp=5:5:0.8:3:3:0.2",
+        "eq=contrast=1.03:brightness=0.0:saturation=1.02:gamma=0.98",
         "fps=60"
     ]
 
@@ -53,8 +55,8 @@ def process_video_ai(input_path, output_path, scale=4, model_name="fsrcnn"):
     cmd.extend([
         "-vf", filter_str,
         "-c:v", "libx264",
-        "-crf", "10", # Master Lossless Bitrate Quality
-        "-preset", "medium", # Balanced high-precision encoding
+        "-crf", "10", # Master Lossless Quality
+        "-preset", "medium",
         "-tune", "film",
         "-max_muxing_queue_size", "2048",
         "-pix_fmt", "yuv420p",
