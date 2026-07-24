@@ -131,9 +131,9 @@ export async function processMultiAiEnhance(params: MultiAiEnhanceParams): Promi
       const sampleBuffer = fileBuffer.length > 8 * 1024 * 1024 ? fileBuffer.subarray(0, 8 * 1024 * 1024) : fileBuffer;
       const base64Data = sampleBuffer.toString('base64');
 
-      let lumaSharpen = '13:13:2.5:7:7:0.8';
-      let contrastBoost = 'contrast=1.35:brightness=0.01:saturation=1.3:gamma=0.9';
-      let geminiReport = 'Gemini 2.0 Flash Vision AI analyzed video frame and dynamically tuned 13x13 Luma Sharpening & contrast parameters.';
+      let lumaSharpen = '5:5:0.8:3:3:0.2';
+      let contrastBoost = 'contrast=1.04:brightness=0.0:saturation=1.02:gamma=0.98';
+      let geminiReport = 'Gemini 2.0 Flash Vision AI analyzed video frame and dynamically tuned 5x5 Luma Sharpening & natural contrast parameters.';
 
       const response = await ai.models.generateContent({
         model: 'gemini-2.0-flash',
@@ -155,8 +155,8 @@ Identify:
 
 Output ONLY valid JSON:
 {
-  "recommendedMatrix": "13:13:2.5:7:7:0.8",
-  "recommendedContrast": "contrast=1.35:brightness=0.01:saturation=1.3:gamma=0.9",
+  "recommendedMatrix": "5:5:0.8:3:3:0.2",
+  "recommendedContrast": "contrast=1.04:brightness=0.0:saturation=1.02:gamma=0.98",
   "aiReport": "Detailed Gemini AI report on sub-pixel sharpness & contrast parameters."
 }`,
               },
@@ -198,8 +198,8 @@ Output ONLY valid JSON:
   // =========================================================================
   console.log(`[MultiAiEnhancer] [Engine D] Executing Local High-Precision Master Fallback Engine...`);
   try {
-    const defaultMatrix = '13:13:2.5:7:7:0.8';
-    const defaultContrast = 'contrast=1.3:brightness=0.01:saturation=1.2:gamma=0.9';
+    const defaultMatrix = '5:5:0.8:3:3:0.2';
+    const defaultContrast = 'contrast=1.04:brightness=0.0:saturation=1.02:gamma=0.98';
     const resD = await runFFmpegEnhance(inputPath, outputPath, targetResolution, fps, defaultMatrix, defaultContrast);
 
     fallbackHistory.push({ engine: 'Engine D: High-Precision Local Master Engine', status: 'success' });
@@ -210,7 +210,7 @@ Output ONLY valid JSON:
       engineUsed: `Engine D: High-Precision Local Master Engine (${targetResolution === '7680x4320' ? '8K Ultra HD' : '4K Ultra HD'})`,
       fallbackHistory,
       resolution: targetResolution,
-      aiReport: `Engine D Fallback: Applied ${targetResolution} Spline spatial scaling, 13x13 unsharp matrix, 3D denoise, and 60FPS high-bitrate encoding.`,
+      aiReport: `Engine D Fallback: Applied ${targetResolution} Lanczos spatial scaling, 5x5 unsharp matrix, 3D denoise, and 60FPS high-bitrate encoding.`,
     };
   } catch (errD: any) {
     console.error(`[MultiAiEnhancer] Engine D Error: ${errD.message}`);
@@ -263,8 +263,8 @@ function runFFmpegEnhance(
 
     const filters = [
       `deblock=filter=weak:block=4`,
-      `hqdn3d=1.5:1.5:3:3`,
-      `scale=${w}:${h}:flags=spline+accurate_rnd+full_chroma_int+full_chroma_inp`,
+      `hqdn3d=1.0:1.0:2:2`,
+      `scale=${w}:${h}:flags=lanczos+accurate_rnd+full_chroma_int+full_chroma_inp`,
       `unsharp=${unsharpMatrix}`,
       `eq=${contrastEq}`,
       `fps=${fps}`,
@@ -274,8 +274,8 @@ function runFFmpegEnhance(
       .videoFilters(filters)
       .videoCodec('libx264')
       .outputOptions([
-        '-crf 10',
-        '-preset fast',
+        '-crf 12',
+        '-preset medium',
         `-r ${fps}`,
         '-pix_fmt yuv420p',
         '-b:a 320k',
