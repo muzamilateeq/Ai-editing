@@ -14,10 +14,23 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   videoUrl,
   badge,
   badgeType,
-  downloadName = 'edited-video.mp4',
+  downloadName = 'enhanced-4k-video.mp4',
 }) => {
+  const handleDownload = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    if (videoUrl.startsWith('blob:')) {
+      // Mobile blob download handler
+      const a = document.createElement('a');
+      a.href = videoUrl;
+      a.download = downloadName.endsWith('.mp4') || downloadName.endsWith('.webm') ? downloadName : `${downloadName}.webm`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      e.preventDefault();
+    }
+  };
+
   return (
-    <div className="glass-panel rounded-2xl p-4 border border-slate-800 flex flex-col space-y-3 relative group">
+    <div className="glass-panel rounded-2xl p-4 border border-slate-800 flex flex-col space-y-3 relative group shadow-xl">
       {/* Header Bar */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -40,15 +53,20 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         </span>
       </div>
 
-      {/* HTML5 Video Element */}
+      {/* HTML5 Video Element with Universal Mobile Source Fallback */}
       <div className="relative rounded-xl overflow-hidden bg-black/90 aspect-video border border-slate-800 shadow-2xl flex items-center justify-center">
         <video
           key={videoUrl}
-          src={videoUrl}
           controls
           playsInline
+          preload="auto"
           className="w-full h-full object-contain"
-        />
+        >
+          <source src={videoUrl} type={videoUrl.startsWith('blob:') ? 'video/webm' : 'video/mp4'} />
+          <source src={videoUrl} type="video/mp4" />
+          <source src={videoUrl} type="video/webm" />
+          Your mobile browser does not support playing this video inline. Tap "Download" below to open in gallery.
+        </video>
       </div>
 
       {/* Action Footer */}
@@ -67,10 +85,11 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           <a
             href={videoUrl}
             download={downloadName}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md shadow-indigo-600/20 transition-all hover:scale-105"
+            onClick={handleDownload}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-semibold shadow-md shadow-purple-600/20 transition-all hover:scale-105"
           >
             <Download className="w-3.5 h-3.5" />
-            Download Edited MP4
+            Download Enhanced Video
           </a>
         )}
       </div>
